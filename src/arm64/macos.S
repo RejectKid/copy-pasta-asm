@@ -857,6 +857,12 @@ valid_calendar:
  msg sUTF8String
  mov x19,x0
  cbz x19,8f
+ bl _strlen
+ mov x26,x0
+ cmp x26,#20
+ b.lo 8f
+ cmp x26,#42
+ b.hi 8f
  mov x20,#0
  mov x21,#0
  mov x22,#0
@@ -940,6 +946,96 @@ valid_calendar:
 10:
  cmp x22,x9
  b.hi 8f
+ // Require a real UTC designator or an offset within DateTimeOffset limits.
+ mov x23,#19
+ ldrb w9,[x19,x23]
+ cmp w9,#46
+ b.ne 12f
+ add x23,x23,#1
+ mov x24,#0
+13:
+ ldrb w9,[x19,x23]
+ sub w10,w9,#48
+ cmp w10,#9
+ b.hi 14f
+ add x23,x23,#1
+ add x24,x24,#1
+ cmp x24,#16
+ b.hi 8f
+ b 13b
+14:
+ cbz x24,8f
+12:
+ ldrb w9,[x19,x23]
+ cmp w9,#90
+ b.eq 15f
+ cmp w9,#43
+ b.eq 16f
+ cmp w9,#45
+ b.ne 8f
+16:
+ add x9,x23,#6
+ cmp x26,x9
+ b.ne 8f
+ mov x24,#1
+17:
+ cmp x24,#3
+ b.eq 18f
+ cmp x24,#6
+ b.eq 19f
+ add x25,x23,x24
+ ldrb w9,[x19,x25]
+ sub w9,w9,#48
+ cmp w9,#9
+ b.hi 8f
+ add x24,x24,#1
+ b 17b
+18:
+ add x25,x23,x24
+ ldrb w9,[x19,x25]
+ cmp w9,#58
+ b.ne 8f
+ add x24,x24,#1
+ b 17b
+19:
+ add x25,x23,#6
+ ldrb w9,[x19,x25]
+ cbnz w9,8f
+ add x25,x23,#1
+ ldrb w9,[x19,x25]
+ sub w9,w9,#48
+ mov w10,#10
+ mul w9,w9,w10
+ add x25,x23,#2
+ ldrb w10,[x19,x25]
+ sub w10,w10,#48
+ add w9,w9,w10
+ cmp w9,#14
+ b.hi 8f
+ mov w11,w9
+ add x25,x23,#4
+ ldrb w9,[x19,x25]
+ sub w9,w9,#48
+ mov w10,#10
+ mul w9,w9,w10
+ add x25,x23,#5
+ ldrb w10,[x19,x25]
+ sub w10,w10,#48
+ add w9,w9,w10
+ cmp w9,#59
+ b.hi 8f
+ cmp w11,#14
+ b.ne 20f
+ cbnz w9,8f
+ b 20f
+15:
+ add x9,x23,#1
+ cmp x26,x9
+ b.ne 8f
+ add x25,x23,#1
+ ldrb w9,[x19,x25]
+ cbnz w9,8f
+20:
  mov w0,#1
  leave
 8:
