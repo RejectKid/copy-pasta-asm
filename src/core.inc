@@ -42,7 +42,6 @@ core_whitespace db '(whitespace)',0
 core_date_fmt db '%x %H:%M',0
 core_iso_fmt db '%Y-%m-%dT%H:%M:%SZ',0
 core_iso_base_fmt db '%Y-%m-%dT%H:%M:%S',0
-core_iso_precise_fmt db '%s.%07uZ',0
 core_file_read db 'rb',0
 core_file_write db 'wb',0
 core_json_open db '[',10,0
@@ -145,7 +144,29 @@ proc core_new
     lea r13,[rbp-200]
     ccall strftime,r13,128,core_iso_base_fmt,rax
     lea r14,[rbp-360]
-    ccall snprintf_fn,r14,128,core_iso_precise_fmt,r13,[r12+E_FRACTION]
+    ccall strcpy,r14,r13
+    ccall strlen,r14
+    lea rdi,[r14+rax]
+    mov byte [rdi],'.'
+    inc rdi
+    mov r13d,[r12+E_FRACTION]
+    mov r15d,1000000
+.fraction_digit:
+    mov eax,r13d
+    xor edx,edx
+    div r15d
+    add al,'0'
+    mov [rdi],al
+    inc rdi
+    mov r13d,edx
+    mov eax,r15d
+    xor edx,edx
+    mov ecx,10
+    div ecx
+    mov r15d,eax
+    test r15d,r15d
+    jnz .fraction_digit
+    mov word [rdi],0x005a ; Z plus terminator
     invoke core_strdup,r14
     mov [r12+E_DATE],rax
     mov rax,r12
