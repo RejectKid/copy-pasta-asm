@@ -2008,6 +2008,7 @@ kBackground: .asciz "BackgroundColor"
 .data
 .p2align 3
 calendar_days: .byte 31,28,31,30,31,30,31,31,30,31,30,31
+.p2align 3
 style_keys: .quad kFontName,kFontSize,kFontWeight,kItalic,kForeground,kBackground
 dInterval: .double 0.012
 gPool: .quad 0
