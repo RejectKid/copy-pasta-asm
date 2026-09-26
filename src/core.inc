@@ -5,6 +5,8 @@ history_count dq 0
 selected_index dq -1
 history times MAX_ITEMS dq 0
 history_path times 4096 db 0
+history_temp_path times 4128 db 0
+core_temp_fmt db '%s.tmp',0
 status_buffer times 1024 db 0
 display_buffer times 1024 db 0
 date_buffer times 128 db 0
@@ -345,7 +347,8 @@ proc json_write_string
     return
 
 proc core_save
-    ccall fopen,history_path,core_file_write
+    ccall snprintf_fn,history_temp_path,4128,core_temp_fmt,history_path
+    ccall fopen,history_temp_path,core_file_write
     test rax,rax
     jz .fail
     mov rbx,rax
@@ -422,8 +425,15 @@ proc core_save
     mov r12,rax
     ccall fclose,rbx
     or rax,r12
+    jnz .fail
+%ifdef WINDOWS
+    invoke MoveFileExA,history_temp_path,history_path,9
+%else
+    ccall rename,history_temp_path,history_path
+    test eax,eax
     setz al
     movzx eax,al
+%endif
     return
 .fail:
     xor eax,eax
@@ -722,6 +732,18 @@ proc core_load
     invoke json_next
     cmp eax,'['
     jne .invalid
+    invoke json_validate_value,rax,0
+    test eax,eax
+    jz .invalid
+    invoke json_next
+    test eax,eax
+    jnz .invalid
+    cmp qword [json_error],0
+    jne .invalid
+    mov [json_cursor],r13
+    invoke json_next
+    cmp eax,'['
+    jne .invalid
 .next:
     invoke json_next
     test eax,eax
@@ -800,7 +822,7 @@ proc core_load
     cmp r15,100
     je .stylevalue
     cmp r15,-1
-    je .field
+    je .skip_unknown
     cmp eax,260
     je .field
     cmp r15,E_TIME
@@ -852,6 +874,9 @@ proc core_load
     shl rax,cl
     or [rbx+E_FLAGS],rax
     jmp .field
+.skip_unknown:
+    invoke json_validate_value,rax,0
+    jmp .field
 .datevalue:
     cmp eax,256
     jne .invalid
@@ -873,12 +898,7 @@ proc core_load
     mov rax,[rbx+E_TEXT]
     cmp byte [rax],0
     je .discard
-    cmp qword [history_count],MAX_ITEMS
-    jae .discard
-    mov rax,[history_count]
-    lea rdx,[history]
-    mov [rdx+rax*8],rbx
-    inc qword [history_count]
+    invoke core_load_insert,rbx
     xor ebx,ebx
     jmp .next
 .discard:
@@ -903,8 +923,48 @@ proc core_load
 .done:
     return
 
+; Load preserves duplicates and selects the newest 50, matching OrderByDescending.
+proc core_load_insert
+    mov rbx,rcx
+    lea r12,[history]
+    xor r13d,r13d
+.find:
+    cmp r13,[history_count]
+    jae .insert
+    mov rax,[r12+r13*8]
+    mov rdx,[rax+E_TIME]
+    cmp [rbx+E_TIME],rdx
+    jg .insert
+    inc r13
+    jmp .find
+.insert:
+    cmp r13,MAX_ITEMS
+    jae .discard
+    cmp qword [history_count],MAX_ITEMS
+    jb .shift
+    invoke core_remove,MAX_ITEMS-1
+.shift:
+    mov r14,[history_count]
+.move:
+    cmp r14,r13
+    jbe .place
+    mov rax,[r12+r14*8-8]
+    mov [r12+r14*8],rax
+    dec r14
+    jmp .move
+.place:
+    mov [r12+r13*8],rbx
+    inc qword [history_count]
+    return
+.discard:
+    invoke core_free,rbx
+    return
+
 proc core_parse_date
     mov rbx,rcx
+    ccall strlen,rbx
+    cmp rax,19
+    jb .bad
     lea r12,[rbp-160]
     ccall memset,r12,0,64
     lea rax,[r12+20]
@@ -957,6 +1017,137 @@ proc core_parse_date
     sub r13,rax
 .done:
     mov rax,r13
+    return
+.bad:
+    xor eax,eax
+    return
+
+; Validate the entire JSON grammar before interpreting any entries. Depth is
+; bounded, strings are bounds-checked by json_next, numbers follow RFC 8259.
+proc json_validate_value
+    mov rbx,rcx
+    mov r12,rdx
+    cmp r12,32
+    ja .bad
+    inc r12
+    cmp ebx,256
+    je .good
+    cmp ebx,258
+    je .good
+    cmp ebx,259
+    je .good
+    cmp ebx,260
+    je .good
+    cmp ebx,257
+    je .number
+    cmp ebx,'['
+    je .array
+    cmp ebx,'{'
+    jne .bad
+    invoke json_next
+    cmp eax,'}'
+    je .good
+.key:
+    cmp eax,256
+    jne .bad
+    invoke json_next
+    cmp eax,':'
+    jne .bad
+    invoke json_next
+    invoke json_validate_value,rax,r12
+    test eax,eax
+    jz .bad
+    invoke json_next
+    cmp eax,'}'
+    je .good
+    cmp eax,','
+    jne .bad
+    invoke json_next
+    jmp .key
+.array:
+    invoke json_next
+    cmp eax,']'
+    je .good
+.item:
+    invoke json_validate_value,rax,r12
+    test eax,eax
+    jz .bad
+    invoke json_next
+    cmp eax,']'
+    je .good
+    cmp eax,','
+    jne .bad
+    invoke json_next
+    jmp .item
+.number:
+    lea rsi,[json_token]
+    cmp byte [rsi],'-'
+    jne .integer
+    inc rsi
+.integer:
+    mov al,[rsi]
+    cmp al,'0'
+    je .zero
+    cmp al,'1'
+    jb .bad
+    cmp al,'9'
+    ja .bad
+.digits:
+    inc rsi
+    mov al,[rsi]
+    cmp al,'0'
+    jb .fraction
+    cmp al,'9'
+    jbe .digits
+    jmp .fraction
+.zero:
+    inc rsi
+.fraction:
+    cmp byte [rsi],'.'
+    jne .exponent
+    inc rsi
+    mov al,[rsi]
+    cmp al,'0'
+    jb .bad
+    cmp al,'9'
+    ja .bad
+.fraction_digits:
+    inc rsi
+    mov al,[rsi]
+    cmp al,'0'
+    jb .exponent
+    cmp al,'9'
+    jbe .fraction_digits
+.exponent:
+    mov al,[rsi]
+    or al,32
+    cmp al,'e'
+    jne .number_end
+    inc rsi
+    cmp byte [rsi],'+'
+    je .sign
+    cmp byte [rsi],'-'
+    jne .exp_digit
+.sign:
+    inc rsi
+.exp_digit:
+    mov al,[rsi]
+    cmp al,'0'
+    jb .bad
+    cmp al,'9'
+    ja .bad
+.exponent_digits:
+    inc rsi
+    mov al,[rsi]
+    cmp al,'0'
+    jb .number_end
+    cmp al,'9'
+    jbe .exponent_digits
+.number_end:
+    cmp byte [rsi],0
+    jne .bad
+.good:
+    mov eax,1
     return
 .bad:
     xor eax,eax

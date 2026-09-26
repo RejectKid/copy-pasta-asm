@@ -193,6 +193,15 @@ _main:
  mov x2,x0
  mov x0,x20
  msg sColumnInit
+ mov x21,x0
+ addr x0,sWidth
+ bl _sel_registerName
+ mov x1,x0
+ mov x0,x21
+ mov x9,#340
+ ucvtf d0,x9
+ bl _objc_msgSend
+ mov x0,x21
  mov x2,x0
  load x0,gTable
  msg sAddColumn
@@ -1236,6 +1245,7 @@ sVScroll: .asciz "setHasVerticalScroller:"
 sHScroll: .asciz "setHasHorizontalScroller:"
 sColumnInit: .asciz "initWithIdentifier:"
 sAddColumn: .asciz "addTableColumn:"
+sWidth: .asciz "setWidth:"
 sDataSource: .asciz "setDataSource:"
 sHeader: .asciz "setHeaderView:"
 sReload: .asciz "reloadData"

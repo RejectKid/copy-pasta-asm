@@ -13,6 +13,8 @@ extern CreateFontW, DeleteObject, GetStockObject, SetBkColor, SetTextColor, Crea
 extern MultiByteToWideChar, WideCharToMultiByte, GetEnvironmentVariableA
 extern CoInitializeEx, CoCreateInstance, CoUninitialize, SysFreeString, VariantClear
 extern GetDpiForWindow, SetProcessDpiAwarenessContext
+extern MoveFileExA
+extern SetCapture,ReleaseCapture,SetCursor,ScreenToClient
 
 section .data
 w_class dw __utf16__('CopyPastaAssembly'),0
@@ -60,6 +62,8 @@ w_preview_brush dq 0
 w_uia dq 0
 w_walker dq 0
 w_process_id dd 0
+w_split_width dq 360
+w_dragging dq 0
 ; CLSID_CUIAutomation and IID_IUIAutomation, from the Windows SDK.
 w_clsid dd 0xff48dba4
     dw 0x60ef,0x4201
@@ -120,6 +124,9 @@ proc start
     mov [w_wc+24],rax
     invoke LoadCursorW,0,32512
     mov [w_wc+40],rax
+    invoke LoadIconW,[w_instance],1
+    mov [w_wc+32],rax
+    mov [w_wc+72],rax
     mov qword [w_wc+48],6
     lea rax,[w_class]
     mov [w_wc+64],rax
@@ -234,6 +241,12 @@ proc w_wndproc
     je .color
     cmp edx,2
     je .destroy
+    cmp edx,0x201
+    je .mouse_down
+    cmp edx,0x200
+    je .mouse_move
+    cmp edx,0x202
+    je .mouse_up
     invoke DefWindowProcW,rbx,r12,r13,r14
     return
 .create:
@@ -261,6 +274,35 @@ proc w_wndproc
     mov [w_status],rax
     invoke w_status_set,core_ready
     invoke w_apply_style,0
+    jmp .zero
+.mouse_down:
+    movzx eax,r14w
+    sub rax,[w_split_width]
+    cmp rax,10
+    jb .zero
+    cmp rax,28
+    ja .zero
+    mov qword [w_dragging],1
+    invoke SetCapture,rbx
+    jmp .zero
+.mouse_move:
+    cmp qword [w_dragging],0
+    je .zero
+    movsx r12,r14w
+    sub r12,14
+    cmp r12,180
+    jl .zero
+    invoke GetClientRect,rbx,w_rect
+    mov eax,[w_rect+8]
+    sub rax,220
+    cmp r12,rax
+    ja .zero
+    mov [w_split_width],r12
+    invoke w_layout
+    jmp .zero
+.mouse_up:
+    mov qword [w_dragging],0
+    invoke ReleaseCapture
     jmp .zero
 .size:
     invoke w_layout
@@ -370,17 +412,19 @@ proc w_layout
     invoke MoveWindow,[w_clear_hwnd],100,10,72,32,1
     lea rax,[r12-194]
     invoke MoveWindow,[w_help],190,17,rax,24,1
-    invoke MoveWindow,[w_history_label],10,64,360,22,1
-    lea rax,[r12-398]
-    invoke MoveWindow,[w_preview_label],388,64,rax,22,1
+    mov r14,[w_split_width]
+    lea r15,[r14+28]
+    mov rbx,r12
+    sub rbx,r15
+    sub rbx,10
+    invoke MoveWindow,[w_history_label],10,64,r14,22,1
+    invoke MoveWindow,[w_preview_label],r15,64,rbx,22,1
     lea rax,[r13-128]
-    invoke MoveWindow,[w_list],10,90,360,rax,1
-    lea rax,[r12-398]
+    invoke MoveWindow,[w_list],10,90,r14,rax,1
     lea rdx,[r13-160]
-    invoke MoveWindow,[w_preview],388,90,rax,rdx,1
+    invoke MoveWindow,[w_preview],r15,90,rbx,rdx,1
     lea rax,[r13-62]
-    lea rdx,[r12-398]
-    invoke MoveWindow,[w_details],388,rax,rdx,26,1
+    invoke MoveWindow,[w_details],r15,rax,rbx,26,1
     lea rax,[r13-26]
     lea rdx,[r12-16]
     invoke MoveWindow,[w_status],8,rax,rdx,22,1

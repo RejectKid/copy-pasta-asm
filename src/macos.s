@@ -70,6 +70,9 @@ m_index_set db 'indexSetWithIndex:',0
 m_font_name db 'fontWithName:size:',0
 m_font_system db 'monospacedSystemFontOfSize:weight:',0
 m_set_font db 'setFont:',0
+m_get_string db 'string',0
+m_get_utf8 db 'UTF8String',0
+m_set_width db 'setWidth:',0
 m_remove_sel db 'removeItem:',0
 m_clear_sel db 'clearItems:',0
 m_tick_sel db 'tick:',0
@@ -179,6 +182,14 @@ proc main
     mov r13,rax
     invoke m_string,m_history_label
     invoke m_send,r13,m_column_init,rax,0
+    mov r13,rax
+    ccall sel_registerName,m_set_width
+    mov rdi,r13
+    mov rsi,rax
+    mov eax,340
+    cvtsi2sd xmm0,eax
+    call objc_msgSend
+    mov rax,r13
     invoke m_send,[m_table],m_add_column,rax,0
     invoke m_send,r12,m_set_doc,[m_table],0
     invoke m_class,m_NSScrollView
@@ -208,6 +219,9 @@ proc main
     invoke m_send,[m_preview],m_set_font,rax,0
     invoke core_load
     invoke m_refresh
+    invoke m_send,[m_preview],m_get_string,0,0
+    invoke m_send,rax,m_get_utf8,0,0
+    ccall puts,rax
     invoke m_send,[m_window],m_center,0,0
     invoke m_send,[m_window],m_show,0,0
     invoke m_send,[m_app],m_activate,1,0

@@ -11,6 +11,7 @@ extern _snprintf, _time64, _localtime64, _gmtime64, _mkgmtime64, _strtoi64
 %define timegm_fn _mkgmtime64
 %define strtoll_fn _strtoi64
 %else
+extern rename
 extern snprintf,time,localtime,gmtime,timegm,strtoll
 %define snprintf_fn snprintf
 %define time_fn time

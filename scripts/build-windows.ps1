@@ -21,7 +21,10 @@ try {
     if ($LASTEXITCODE) { throw 'CRT import library failed' }
     & $nasm -f win64 -g -I src/ -o build\copy-pasta.obj src\windows.s
     if ($LASTEXITCODE) { throw 'Assembly failed' }
-    & $vs.FullName /nologo /entry:start /subsystem:windows /largeaddressaware /dynamicbase /nxcompat /debug /out:build\copy-pasta-asm.exe build\copy-pasta.obj build\msvcrt.lib "/libpath:$lib" kernel32.lib user32.lib gdi32.lib ole32.lib oleaut32.lib shell32.lib comctl32.lib
+    $rc = Join-Path "${env:ProgramFiles(x86)}\Windows Kits\10\bin" "$($sdk.Name)\x64\rc.exe"
+    & $rc /nologo /fo build\windows.res assets\windows.rc
+    if ($LASTEXITCODE) { throw 'Resource compilation failed' }
+    & $vs.FullName /nologo /entry:start /subsystem:windows /largeaddressaware /dynamicbase /nxcompat /debug /out:build\copy-pasta-asm.exe build\copy-pasta.obj build\windows.res build\msvcrt.lib "/libpath:$lib" kernel32.lib user32.lib gdi32.lib ole32.lib oleaut32.lib shell32.lib comctl32.lib
     if ($LASTEXITCODE) { throw 'Link failed' }
     if ($Test) {
         $old = $env:COPY_PASTA_HISTORY
