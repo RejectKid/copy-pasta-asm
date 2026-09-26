@@ -18,6 +18,9 @@ extern XOpenDisplay,XCloseDisplay,XDefaultRootWindow,XCreateSimpleWindow,XDestro
 extern XKeysymToKeycode,XGrabKey,XUngrabKey,XPending,XNextEvent,XFlush,XInternAtom
 extern XConvertSelection,XGetWindowProperty,XFree,XTestFakeKeyEvent,XSetErrorHandler
 extern XQueryKeymap
+extern gtk_widget_override_font,gtk_widget_override_color,gtk_widget_override_background_color
+extern pango_font_description_new,pango_font_description_set_family,pango_font_description_set_absolute_size
+extern pango_font_description_set_weight,pango_font_description_set_style,pango_font_description_free
 section .data
 l_title db 'Copy Pasta ASM',0
 l_remove db 'Remove',0
@@ -46,6 +49,10 @@ l_timeout db 'Timed out waiting for X11 selected text.',0
 l_unsupported db 'Linux X11 text output supports common ASCII characters only.',0
 l_shifted db '!@#$%^&*()_+{}:"<>?|~',0
 l_unshifted db '1234567890-=[];',39,',./\`',0
+l_mono db 'monospace',0
+l_scale dq 1024.0
+l_color_scale dq 255.0
+l_rgba times 4 dq 0.0
 l_window dq 0
 l_list dq 0
 l_preview dq 0
@@ -246,6 +253,7 @@ proc l_preview_update
     jz .empty
     mov rbx,rax
     ccall gtk_text_buffer_set_text,[l_buffer],[rbx+E_TEXT],-1
+    invoke l_apply_style,rbx
     lea rax,[rbx+E_TIME]
     ccall localtime,rax
     ccall strftime,date_buffer,128,core_date_fmt,rax
@@ -258,6 +266,83 @@ proc l_preview_update
 .empty:
     ccall gtk_text_buffer_set_text,[l_buffer],core_empty,-1
     ccall gtk_label_set_text,[l_details],core_zero
+    invoke l_apply_style,0
+    return
+proc l_apply_style
+    mov rbx,rcx
+    ccall pango_font_description_new
+    mov r12,rax
+    lea r13,[l_mono]
+    mov r14,13
+    mov r15,400
+    xor esi,esi
+    test rbx,rbx
+    jz .font
+    test qword [rbx+E_FLAGS],F_FONT
+    jz .size
+    mov r13,[rbx+E_FONT]
+.size:
+    test qword [rbx+E_FLAGS],F_SIZE
+    jz .weight
+    movq xmm0,[rbx+E_SIZE]
+    cvttsd2si r14,xmm0
+    cmp r14,1
+    jge .weight
+    mov r14,13
+.weight:
+    cmp qword [rbx+E_WEIGHT],700
+    jl .font
+    mov r15,700
+.font:
+    ccall pango_font_description_set_family,r12,r13
+    mov rdi,r12
+    cvtsi2sd xmm0,r14
+    mulsd xmm0,[l_scale]
+    call pango_font_description_set_absolute_size
+    ccall pango_font_description_set_weight,r12,r15
+    xor edx,edx
+    test rbx,rbx
+    jz .italic
+    cmp qword [rbx+E_ITALIC],0
+    je .italic
+    mov edx,2
+.italic:
+    ccall pango_font_description_set_style,r12,rdx
+    ccall gtk_widget_override_font,[l_preview],r12
+    ccall pango_font_description_free,r12
+    xor ecx,ecx
+    test rbx,rbx
+    jz .fg
+    test qword [rbx+E_FLAGS],F_FG
+    jz .fg
+    mov ecx,[rbx+E_FG]
+.fg:
+    invoke l_color,rcx
+    ccall gtk_widget_override_color,[l_preview],0,l_rgba
+    mov ecx,0xffffff
+    test rbx,rbx
+    jz .bg
+    test qword [rbx+E_FLAGS],F_BG
+    jz .bg
+    mov ecx,[rbx+E_BG]
+.bg:
+    invoke l_color,rcx
+    ccall gtk_widget_override_background_color,[l_preview],0,l_rgba
+    return
+proc l_color
+    lea rdx,[l_rgba]
+    mov r8d,3
+.loop:
+    movzx eax,cl
+    cvtsi2sd xmm0,eax
+    divsd xmm0,[l_color_scale]
+    movq [rdx],xmm0
+    shr ecx,8
+    add rdx,8
+    dec r8d
+    jnz .loop
+    mov rax,0x3ff0000000000000
+    mov [rdx],rax
     return
 proc l_remove_click
     invoke core_remove,[selected_index]

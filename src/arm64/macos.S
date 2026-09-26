@@ -513,16 +513,8 @@ add_text:
  msg sEqual
  cbz w0,2f
  mov x0,x22
- load x1,gStyleKey
- bl field
- cbz x0,4f
- mov x22,x0
- klass cNull
- msg sNull
- mov x2,x0
- mov x0,x22
- msg sEqual
- cbnz w0,4f
+ bl has_style
+ cbz w0,4f
 2:
  add x21,x21,#1
  b 1b
@@ -724,6 +716,17 @@ cell:
  mov x2,x0
  mov x0,x21
  msg sAppend
+ mov x21,x0
+ mov x0,x19
+ bl has_style
+ cbz w0,3f
+ stringlit tRichPrefix
+ mov x2,x0
+ mov x0,x21
+ msg sAppend
+ mov x21,x0
+3:
+ mov x0,x21
  mov x2,x20
  msg sAppend
  leave
@@ -799,6 +802,12 @@ preview_update:
  add sp,sp,#16
  addr x0,gFormatBuffer
  bl string
+ mov x22,x0
+ mov x0,x19
+ bl style_details
+ mov x2,x0
+ mov x0,x22
+ msg sAppend
  mov x2,x0
  load x0,gDetails
  msg sValue
@@ -817,19 +826,277 @@ preview_update:
  leave
 preview_font:
  enter
- klass cFont
+ bl selected
+ bl style_dictionary
  mov x19,x0
+ mov x9,#13
+ ucvtf d0,x9
+ str d0,[sp,#104]
+ cbz x19,1f
+ mov x0,x19
+ addr x1,kFontSize
+ bl style_value
+ cbz x0,1f
+ msg sDouble
+ fcmp d0,#0.0
+ b.le 1f
+ str d0,[sp,#104]
+1:
+ klass cFont
+ mov x20,x0
+ cbz x19,2f
+ mov x0,x19
+ addr x1,kFontName
+ bl style_value
+ cbz x0,2f
+ mov x21,x0
+ klass cString
+ mov x2,x0
+ mov x0,x21
+ msg sIsKind
+ cbz w0,2f
+ addr x0,sNamedFont
+ bl _sel_registerName
+ mov x1,x0
+ mov x0,x20
+ mov x2,x21
+ ldr d0,[sp,#104]
+ bl _objc_msgSend
+ cbnz x0,3f
+2:
  addr x0,sMonoFont
  bl _sel_registerName
  mov x1,x0
- mov x0,x19
- mov x9,#13
- ucvtf d0,x9
+ mov x0,x20
+ ldr d0,[sp,#104]
  fmov d1,xzr
  bl _objc_msgSend
+3:
+ mov x21,x0
+ mov x22,#0
+ cbz x19,5f
+ mov x0,x19
+ addr x1,kFontWeight
+ bl style_value
+ cbz x0,4f
+ msg sInteger
+ cmp x0,#700
+ b.lt 4f
+ orr x22,x22,#2
+4:
+ mov x0,x19
+ addr x1,kItalic
+ bl style_value
+ cbz x0,5f
+ msg sBool
+ cbz w0,5f
+ orr x22,x22,#1
+5:
+ cbz x22,6f
+ klass cFontManager
+ msg sFontManager
+ mov x2,x21
+ mov x3,x22
+ msg sConvertFont
+ mov x21,x0
+6:
+ mov x0,x21
  mov x2,x0
  load x0,gPreview
  msg sSetFont
+ mov x21,#0
+ cbz x19,7f
+ mov x0,x19
+ addr x1,kForeground
+ bl style_value
+ cbz x0,7f
+ msg sInteger
+ mov x21,x0
+7:
+ mov x0,x21
+ bl color_ref
+ mov x2,x0
+ load x0,gPreview
+ msg sTextColor
+ mov x21,#0xffffff
+ cbz x19,8f
+ mov x0,x19
+ addr x1,kBackground
+ bl style_value
+ cbz x0,8f
+ msg sInteger
+ mov x21,x0
+8:
+ mov x0,x21
+ bl color_ref
+ mov x2,x0
+ load x0,gPreview
+ msg sBackgroundColor
+ leave
+style_dictionary:
+ enter
+ cbz x0,9f
+ load x1,gStyleKey
+ bl field
+ mov x19,x0
+ klass cImmutableDictionary
+ mov x2,x0
+ mov x0,x19
+ msg sIsKind
+ cbz w0,9f
+ mov x0,x19
+ leave
+9:
+ mov x0,#0
+ leave
+// x0 dictionary, x1 C key -> value, mapping NSNull to nil.
+style_value:
+ enter
+ mov x19,x0
+ mov x0,x1
+ bl string
+ mov x2,x0
+ mov x0,x19
+ msg sObjectForKey
+ mov x20,x0
+ cbz x20,9f
+ klass cNull
+ mov x2,x0
+ mov x0,x20
+ msg sIsKind
+ cbnz w0,9f
+ mov x0,x20
+ leave
+9:
+ mov x0,#0
+ leave
+has_style:
+ enter
+ bl style_dictionary
+ mov x19,x0
+ cbz x19,9f
+ mov x20,#0
+ addr x21,style_keys
+1:
+ mov x0,x19
+ ldr x1,[x21,x20,lsl #3]
+ bl style_value
+ cbz x0,2f
+ cbnz x20,8f
+ msg sLength
+ cbnz x0,8f
+2:
+ add x20,x20,#1
+ cmp x20,#6
+ b.lt 1b
+9:
+ mov x0,#0
+ leave
+8:
+ mov x0,#1
+ leave
+color_ref:
+ enter
+ mov x19,x0
+ klass cColor
+ mov x20,x0
+ addr x0,sRGB
+ bl _sel_registerName
+ mov x1,x0
+ mov x0,x20
+ mov x9,#255
+ ucvtf d4,x9
+ and x9,x19,#255
+ ucvtf d0,x9
+ fdiv d0,d0,d4
+ lsr x19,x19,#8
+ and x9,x19,#255
+ ucvtf d1,x9
+ fdiv d1,d1,d4
+ lsr x19,x19,#8
+ and x9,x19,#255
+ ucvtf d2,x9
+ fdiv d2,d2,d4
+ fmov d3,#1.0
+ bl _objc_msgSend
+ leave
+style_details:
+ enter
+ bl style_dictionary
+ mov x19,x0
+ cbz x19,9f
+ klass cArray
+ msg sArray
+ mov x20,x0
+ mov x0,x19
+ addr x1,kFontName
+ bl style_value
+ cbz x0,1f
+ mov x21,x0
+ msg sLength
+ cbz x0,1f
+ mov x0,x20
+ mov x2,x21
+ msg sAddObject
+1:
+ mov x0,x19
+ addr x1,kFontSize
+ bl style_value
+ cbz x0,2f
+ msg sDouble
+ fcmp d0,#0.0
+ b.le 2f
+ fcvtas x9,d0
+ sub sp,sp,#16
+ str x9,[sp]
+ addr x0,gStyleNumber
+ mov x1,#64
+ addr x2,tPointFormat
+ bl _snprintf
+ add sp,sp,#16
+ addr x0,gStyleNumber
+ bl string
+ mov x2,x0
+ mov x0,x20
+ msg sAddObject
+2:
+ mov x0,x19
+ addr x1,kFontWeight
+ bl style_value
+ cbz x0,3f
+ msg sInteger
+ cmp x0,#700
+ b.lt 3f
+ stringlit tBold
+ mov x2,x0
+ mov x0,x20
+ msg sAddObject
+3:
+ mov x0,x19
+ addr x1,kItalic
+ bl style_value
+ cbz x0,4f
+ msg sBool
+ cbz w0,4f
+ stringlit tItalic
+ mov x2,x0
+ mov x0,x20
+ msg sAddObject
+4:
+ mov x0,x20
+ msg sCount
+ cbz x0,9f
+ stringlit tComma
+ mov x2,x0
+ mov x0,x20
+ msg sJoin
+ mov x21,x0
+ stringlit tStylePrefix
+ mov x2,x21
+ msg sAppend
+ leave
+9:
+ stringlit tEmpty
  leave
 status:
  enter
@@ -1207,6 +1474,8 @@ cTable: .asciz "NSTableView"
 cColumn: .asciz "NSTableColumn"
 cString: .asciz "NSString"
 cFont: .asciz "NSFont"
+cFontManager: .asciz "NSFontManager"
+cColor: .asciz "NSColor"
 cTimer: .asciz "NSTimer"
 cPool: .asciz "NSAutoreleasePool"
 cArray: .asciz "NSMutableArray"
@@ -1263,6 +1532,17 @@ sSelectedRow: .asciz "selectedRow"
 sSelectIndexes: .asciz "selectRowIndexes:byExtendingSelection:"
 sIndexSet: .asciz "indexSetWithIndex:"
 sMonoFont: .asciz "monospacedSystemFontOfSize:weight:"
+sNamedFont: .asciz "fontWithName:size:"
+sFontManager: .asciz "sharedFontManager"
+sConvertFont: .asciz "convertFont:toHaveTrait:"
+sRGB: .asciz "colorWithCalibratedRed:green:blue:alpha:"
+sTextColor: .asciz "setTextColor:"
+sBackgroundColor: .asciz "setBackgroundColor:"
+sDouble: .asciz "doubleValue"
+sInteger: .asciz "integerValue"
+sBool: .asciz "boolValue"
+sArray: .asciz "array"
+sJoin: .asciz "componentsJoinedByString:"
 sSetFont: .asciz "setFont:"
 sRemove: .asciz "removeItem:"
 sClear: .asciz "clearItems:"
@@ -1316,6 +1596,12 @@ tHistory: .asciz "History"
 tPreview: .asciz "Selected text"
 tReady: .asciz "Ready"
 tZero: .asciz "0 characters"
+tRichPrefix: .asciz "[Rich text] "
+tStylePrefix: .asciz " | "
+tPointFormat: .asciz "%u pt"
+tComma: .asciz ", "
+tBold: .asciz "bold"
+tItalic: .asciz "italic"
 tEmpty: .asciz ""
 tCR: .asciz "\r"
 tLF: .asciz "\n"
@@ -1350,8 +1636,15 @@ tFailed: .asciz "Typing failed: could not create a keyboard event."
 kText: .asciz "Text"
 kStyle: .asciz "Style"
 kDate: .asciz "CapturedAt"
+kFontName: .asciz "FontName"
+kFontSize: .asciz "FontSize"
+kFontWeight: .asciz "FontWeight"
+kItalic: .asciz "IsItalic"
+kForeground: .asciz "ForegroundColor"
+kBackground: .asciz "BackgroundColor"
 .data
 .p2align 3
+style_keys: .quad kFontName,kFontSize,kFontWeight,kItalic,kForeground,kBackground
 dInterval: .double 0.012
 gPool: .quad 0
 gApp: .quad 0
@@ -1376,3 +1669,4 @@ gTypingText: .quad 0
 gTypingIndex: .quad 0
 gWaitTicks: .quad 0
 .zerofill __DATA,__bss,gFormatBuffer,1024,3
+.zerofill __DATA,__bss,gStyleNumber,64,3

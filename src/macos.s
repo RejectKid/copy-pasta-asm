@@ -26,6 +26,7 @@ m_NSTableColumn db 'NSTableColumn',0
 m_NSString db 'NSString',0
 m_NSFont db 'NSFont',0
 m_NSColor db 'NSColor',0
+m_NSFontManager db 'NSFontManager',0
 m_NSTimer db 'NSTimer',0
 m_NSPool db 'NSAutoreleasePool',0
 m_delegate_name db 'CopyPastaAssemblyDelegate',0
@@ -74,6 +75,12 @@ m_set_font db 'setFont:',0
 m_get_string db 'string',0
 m_get_utf8 db 'UTF8String',0
 m_set_width db 'setWidth:',0
+m_shared_font_manager db 'sharedFontManager',0
+m_convert_font db 'convertFont:toHaveTrait:',0
+m_color_rgb db 'colorWithCalibratedRed:green:blue:alpha:',0
+m_text_color db 'setTextColor:',0
+m_background_color db 'setBackgroundColor:',0
+m_color_scale dq 255.0
 m_remove_sel db 'removeItem:',0
 m_clear_sel db 'clearItems:',0
 m_tick_sel db 'tick:',0
@@ -410,6 +417,7 @@ proc m_preview_update
     mov rbx,rax
     invoke m_string,[rbx+E_TEXT]
     invoke m_send,[m_preview],m_set_string,rax,0
+    invoke m_apply_style,rbx
     lea rax,[rbx+E_TIME]
     ccall localtime,rax
     ccall strftime,date_buffer,128,core_date_fmt,rax
@@ -425,6 +433,101 @@ proc m_preview_update
     invoke m_send,[m_preview],m_set_string,rax,0
     invoke m_string,core_zero
     invoke m_send,[m_details],m_set_value,rax,0
+    invoke m_apply_style,0
+    return
+proc m_apply_style
+    mov rbx,rcx
+    lea rcx,[m_consolas]
+    mov r12,0x402a000000000000
+    test rbx,rbx
+    jz .font
+    test qword [rbx+E_FLAGS],F_FONT
+    jz .size
+    mov rcx,[rbx+E_FONT]
+.size:
+    test qword [rbx+E_FLAGS],F_SIZE
+    jz .font
+    mov r12,[rbx+E_SIZE]
+.font:
+    invoke m_string,rcx
+    mov r13,rax
+    invoke m_class,m_NSFont
+    mov r14,rax
+    ccall sel_registerName,m_font_name
+    mov rdi,r14
+    mov rsi,rax
+    mov rdx,r13
+    movq xmm0,r12
+    call objc_msgSend
+    test rax,rax
+    jnz .traits
+    ccall sel_registerName,m_font_system
+    mov rdi,r14
+    mov rsi,rax
+    movq xmm0,r12
+    pxor xmm1,xmm1
+    call objc_msgSend
+.traits:
+    mov r15,rax
+    xor r12d,r12d
+    test rbx,rbx
+    jz .set
+    cmp qword [rbx+E_WEIGHT],700
+    jl .italic
+    or r12d,2
+.italic:
+    cmp qword [rbx+E_ITALIC],0
+    je .convert
+    or r12d,1
+.convert:
+    test r12,r12
+    jz .set
+    invoke m_class,m_NSFontManager
+    invoke m_send,rax,m_shared_font_manager,0,0
+    invoke m_send,rax,m_convert_font,r15,r12
+    mov r15,rax
+.set:
+    invoke m_send,[m_preview],m_set_font,r15,0
+    xor ecx,ecx
+    test rbx,rbx
+    jz .fg
+    test qword [rbx+E_FLAGS],F_FG
+    jz .fg
+    mov ecx,[rbx+E_FG]
+.fg:
+    invoke m_color,rcx
+    invoke m_send,[m_preview],m_text_color,rax,0
+    mov ecx,0xffffff
+    test rbx,rbx
+    jz .bg
+    test qword [rbx+E_FLAGS],F_BG
+    jz .bg
+    mov ecx,[rbx+E_BG]
+.bg:
+    invoke m_color,rcx
+    invoke m_send,[m_preview],m_background_color,rax,0
+    return
+proc m_color
+    mov rbx,rcx
+    invoke m_class,m_NSColor
+    mov r12,rax
+    ccall sel_registerName,m_color_rgb
+    mov rsi,rax
+    mov rdi,r12
+    movzx eax,bl
+    cvtsi2sd xmm0,eax
+    divsd xmm0,[m_color_scale]
+    shr ebx,8
+    movzx eax,bl
+    cvtsi2sd xmm1,eax
+    divsd xmm1,[m_color_scale]
+    shr ebx,8
+    movzx eax,bl
+    cvtsi2sd xmm2,eax
+    divsd xmm2,[m_color_scale]
+    mov rax,0x3ff0000000000000
+    movq xmm3,rax
+    call objc_msgSend
     return
 proc m_remove_click
     invoke core_remove,[selected_index]
