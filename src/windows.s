@@ -458,8 +458,10 @@ proc w_preview_update
     lea rax,[rbx+E_TIME]
     ccall localtime_fn,rax
     ccall strftime,date_buffer,128,core_date_fmt,rax
+    invoke core_style_details,rbx
+    mov r12,rax
     invoke core_length,[rbx+E_TEXT]
-    ccall snprintf_fn,details_buffer,1024,core_details_fmt,rax,date_buffer,core_empty
+    ccall snprintf_fn,details_buffer,1024,core_details_fmt,rax,date_buffer,r12
     invoke w_utf16,details_buffer
     invoke SetWindowTextW,[w_details],rax
     return

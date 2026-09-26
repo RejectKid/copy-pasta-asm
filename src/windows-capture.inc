@@ -167,8 +167,12 @@ proc w_element_selection
     mov r14,rax
     test r14,r14
     jz .cleanup
+    invoke core_blank,r14
+    test eax,eax
+    jnz .blank
     invoke core_new,r14
     mov r15,rax
+.blank:
     ccall free,r14
     test r15,r15
     jz .cleanup
@@ -289,11 +293,16 @@ proc w_native_selection
     mov rbx,rax
     test rbx,rbx
     jz .none
+    invoke core_blank,rbx
+    test eax,eax
+    jnz .blank
     invoke core_new,rbx
     mov r12,rax
     ccall free,rbx
     mov rax,r12
     return
+.blank:
+    ccall free,rbx
 .none:
     xor eax,eax
     return

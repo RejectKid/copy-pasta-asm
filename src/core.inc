@@ -26,6 +26,14 @@ core_type_fmt db 'Typing %u/%u characters...',0
 core_typed_fmt db 'Typed %u characters.',0
 core_details_fmt db '%u characters captured %s%s',0
 core_zero db '0 characters',0
+core_style_buffer times 1024 db 0
+core_style_number times 64 db 0
+core_style_first db ' | ',0
+core_style_next db ', ',0
+core_style_fmt db '%s%s',0
+core_style_pt db '%u pt',0
+core_bold db 'bold',0
+core_italic db 'italic',0
 core_text db 'text',0
 core_rich db 'rich text',0
 core_rich_prefix db '[Rich text] ',0
@@ -258,7 +266,7 @@ proc core_selected
     xor eax,eax
     return
 
-; Produces a date and a single-line UTF-8 preview, truncated at 73 codepoints.
+; Produces the original 76 UTF-16-unit display preview (73 plus ellipsis).
 proc core_display
     mov rbx,rcx
     lea rax,[rbx+E_TIME]
@@ -266,13 +274,13 @@ proc core_display
     ccall strftime,date_buffer,128,core_date_fmt,rax
     mov rsi,[rbx+E_TEXT]
     lea rdi,[json_token]
-    xor r12d,r12d
 .copy:
     mov al,[rsi]
     test al,al
     jz .end
-    cmp r12d,73
-    jae .ellipsis
+    lea rdx,[json_token+1048568]
+    cmp rdi,rdx
+    jae .end
     inc rsi
     cmp al,13
     je .space
@@ -284,27 +292,194 @@ proc core_display
     mov al,' '
 .put:
     stosb
-    cmp al,0x80
-    jb .count
-    cmp al,0xc0
-    jb .copy
-.count:
-    inc r12d
     jmp .copy
-.ellipsis:
-    mov byte [rdi],'.'
-    mov byte [rdi+1],'.'
-    mov byte [rdi+2],'.'
-    add rdi,3
 .end:
     mov byte [rdi],0
+    invoke core_trim,json_token
+    mov r13,rax
+    mov byte [rdx],0
+    cmp byte [r13],0
+    jne .length
+    lea r13,[core_whitespace]
+.length:
+    invoke core_length,r13
+    cmp eax,76
+    jbe .prefix
+    mov rsi,r13
+    xor r14d,r14d
+.truncate:
+    invoke core_decode,rsi
+    mov ecx,1
+    cmp eax,0x10000
+    jb .units
+    inc ecx
+.units:
+    add r14d,ecx
+    cmp r14d,73
+    ja .ellipsis
+    add rsi,rdx
+    cmp r14d,73
+    jb .truncate
+.ellipsis:
+    mov dword [rsi],0x002e2e2e
+.prefix:
     lea r12,[core_empty]
     cmp qword [rbx+E_FLAGS],0
     je .format
     lea r12,[core_rich_prefix]
 .format:
-    ccall snprintf_fn,display_buffer,1024,core_display_fmt,date_buffer,r12,json_token
+    ccall snprintf_fn,display_buffer,1024,core_display_fmt,date_buffer,r12,r13
     lea rax,[display_buffer]
+    return
+
+; UTF-8 scalar -> EAX and byte length -> EDX. Internal strings are terminated.
+proc core_decode
+    movzx eax,byte [rcx]
+    mov edx,1
+    cmp eax,0xc0
+    jb .done
+    mov r8d,eax
+    and eax,31
+    cmp r8d,0xe0
+    jb .two
+    and eax,15
+    cmp r8d,0xf0
+    jb .three
+    and eax,7
+    shl eax,6
+    movzx r9d,byte [rcx+1]
+    and r9d,63
+    or eax,r9d
+    inc rcx
+    inc edx
+.three:
+    shl eax,6
+    movzx r9d,byte [rcx+1]
+    and r9d,63
+    or eax,r9d
+    inc rcx
+    inc edx
+.two:
+    shl eax,6
+    movzx r9d,byte [rcx+1]
+    and r9d,63
+    or eax,r9d
+    inc edx
+.done:
+    return
+; IsWhiteSpace-compatible scalar predicate for .NET's Unicode whitespace set.
+proc core_space
+    cmp ecx,32
+    je .yes
+    cmp ecx,9
+    jb .no
+    cmp ecx,13
+    jbe .yes
+    cmp ecx,0x85
+    je .yes
+    cmp ecx,0xa0
+    je .yes
+    cmp ecx,0x1680
+    je .yes
+    cmp ecx,0x2000
+    jb .no
+    cmp ecx,0x200a
+    jbe .yes
+    cmp ecx,0x2028
+    je .yes
+    cmp ecx,0x2029
+    je .yes
+    cmp ecx,0x202f
+    je .yes
+    cmp ecx,0x205f
+    je .yes
+    cmp ecx,0x3000
+    je .yes
+.no:
+    xor eax,eax
+    return
+.yes:
+    mov eax,1
+    return
+; Return trimmed bounds RAX=start, RDX=end without modifying the string.
+proc core_trim
+    mov rbx,rcx
+    mov r12,rcx
+    mov r13,rcx
+    xor r14d,r14d
+.loop:
+    cmp byte [r12],0
+    je .done
+    invoke core_decode,r12
+    mov r15,rdx
+    invoke core_space,rax
+    test eax,eax
+    jnz .white
+    test r14d,r14d
+    jnz .end_update
+    mov rbx,r12
+    mov r14d,1
+.end_update:
+    lea r13,[r12+r15]
+.white:
+    add r12,r15
+    jmp .loop
+.done:
+    mov rax,rbx
+    mov rdx,r13
+    return
+proc core_blank
+    invoke core_trim,rcx
+    cmp rax,rdx
+    sete al
+    movzx eax,al
+    return
+
+proc core_style_details
+    mov rbx,rcx
+    mov byte [core_style_buffer],0
+    test rbx,rbx
+    jz .done
+    mov rax,[rbx+E_FONT]
+    test rax,rax
+    jz .size
+    cmp byte [rax],0
+    je .size
+    invoke core_style_append,rax
+.size:
+    test qword [rbx+E_FLAGS],F_SIZE
+    jz .weight
+    movq xmm0,[rbx+E_SIZE]
+    cvtsd2si r12,xmm0
+    test r12,r12
+    jle .weight
+    ccall snprintf_fn,core_style_number,64,core_style_pt,r12
+    invoke core_style_append,core_style_number
+.weight:
+    cmp qword [rbx+E_WEIGHT],700
+    jl .italic
+    invoke core_style_append,core_bold
+.italic:
+    cmp qword [rbx+E_ITALIC],0
+    je .done
+    invoke core_style_append,core_italic
+.done:
+    lea rax,[core_style_buffer]
+    return
+proc core_style_append
+    mov rbx,rcx
+    ccall strlen,core_style_buffer
+    lea rcx,[core_style_buffer]
+    add rcx,rax
+    mov rdx,1024
+    sub rdx,rax
+    lea r8,[core_style_next]
+    test rax,rax
+    jnz .append
+    lea r8,[core_style_first]
+.append:
+    ccall snprintf_fn,rcx,rdx,core_style_fmt,r8,rbx
+    mov byte [core_style_buffer+1023],0
     return
 
 ; JSON escaping writes Unicode as UTF-8 and escapes all control bytes.

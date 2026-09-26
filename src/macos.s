@@ -9,6 +9,7 @@ extern AXIsProcessTrusted,AXUIElementCreateSystemWide,AXUIElementCopyAttributeVa
 extern CFStringCreateWithCString,CFStringGetLength,CFStringGetCString,CFStringGetCharacters
 extern CFRelease,CFMachPortCreateRunLoopSource,CFRunLoopGetCurrent,CFRunLoopAddSource
 extern kCFRunLoopCommonModes
+extern fflush
 extern CGEventTapCreate,CGEventTapEnable,CGEventGetFlags,CGEventGetIntegerValueField
 extern CGEventCreateKeyboardEvent,CGEventKeyboardSetUnicodeString,CGEventPost
 section .data
@@ -222,6 +223,7 @@ proc main
     invoke m_send,[m_preview],m_get_string,0,0
     invoke m_send,rax,m_get_utf8,0,0
     ccall puts,rax
+    ccall fflush,0
     invoke m_send,[m_window],m_center,0,0
     invoke m_send,[m_window],m_show,0,0
     invoke m_send,[m_app],m_activate,1,0
@@ -411,8 +413,10 @@ proc m_preview_update
     lea rax,[rbx+E_TIME]
     ccall localtime,rax
     ccall strftime,date_buffer,128,core_date_fmt,rax
+    invoke core_style_details,rbx
+    mov r12,rax
     invoke core_length,[rbx+E_TEXT]
-    ccall snprintf,details_buffer,1024,core_details_fmt,rax,date_buffer,core_empty
+    ccall snprintf,details_buffer,1024,core_details_fmt,rax,date_buffer,r12
     invoke m_string,details_buffer
     invoke m_send,[m_details],m_set_value,rax,0
     return
@@ -547,6 +551,9 @@ proc m_capture
     ccall CFStringGetCString,r13,rax,r14,0x08000100
     test al,al
     jz .free
+    invoke core_blank,[rbp-80]
+    test eax,eax
+    jnz .free
     invoke core_new,[rbp-80]
     mov r15,rax
 .free:

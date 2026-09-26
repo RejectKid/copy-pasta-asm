@@ -249,8 +249,10 @@ proc l_preview_update
     lea rax,[rbx+E_TIME]
     ccall localtime,rax
     ccall strftime,date_buffer,128,core_date_fmt,rax
+    invoke core_style_details,rbx
+    mov r12,rax
     invoke core_length,[rbx+E_TEXT]
-    ccall snprintf,details_buffer,1024,core_details_fmt,rax,date_buffer,core_empty
+    ccall snprintf,details_buffer,1024,core_details_fmt,rax,date_buffer,r12
     ccall gtk_label_set_text,[l_details],details_buffer
     return
 .empty:
@@ -389,6 +391,9 @@ proc l_tick
     jne .free_selection
     cmp qword [rbp-88],0
     jne .free_selection
+    invoke core_blank,r12
+    test eax,eax
+    jnz .free_selection
     invoke core_new,r12
     invoke core_add,rax
     invoke core_save

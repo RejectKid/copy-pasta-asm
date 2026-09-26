@@ -983,6 +983,13 @@ capture:
  cbnz w0,6f
  ldr x21,[sp,#112]
  cbz x21,6f
+ klass cCharacterSet
+ msg sWhitespace
+ mov x2,x0
+ mov x0,x21
+ msg sTrim
+ msg sLength
+ cbz x0,5f
  mov x0,x21
  bl add_text
  bl save_history
@@ -1005,6 +1012,9 @@ capture:
  mov x0,x19
  bl _CFRelease
  leave
+5:
+ mov x0,x21
+ bl _CFRelease
 6:
  mov x0,x20
  bl _CFRelease
