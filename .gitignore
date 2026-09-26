@@ -1,0 +1,10 @@
+/build/
+/tools/
+/work/
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.res
+.DS_Store
