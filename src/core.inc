@@ -41,6 +41,8 @@ core_display_fmt db '%s  %s%s',0
 core_whitespace db '(whitespace)',0
 core_date_fmt db '%x %H:%M',0
 core_iso_fmt db '%Y-%m-%dT%H:%M:%SZ',0
+core_iso_base_fmt db '%Y-%m-%dT%H:%M:%S',0
+core_iso_precise_fmt db '%s.%07uZ',0
 core_file_read db 'rb',0
 core_file_write db 'wb',0
 core_json_open db '[',10,0
@@ -99,6 +101,32 @@ proc core_strdup
 .done:
     return
 
+; Returns UTC epoch seconds in RAX and 100 ns fractional ticks in RDX.
+proc core_now
+%ifdef WINDOWS
+    lea r12,[rbp-80]
+    invoke GetSystemTimePreciseAsFileTime,r12
+    mov rax,[r12]
+    mov r11,0x19db1ded53e8000
+    sub rax,r11
+    mov r11,10000000
+    xor edx,edx
+    div r11
+%else
+    lea r12,[rbp-80]
+    ccall gettimeofday,r12,0
+    test eax,eax
+    jnz .fallback
+    mov rax,[r12]
+    mov rdx,[r12+8]
+    imul rdx,10
+    return
+.fallback:
+    ccall time_fn,0
+    xor edx,edx
+%endif
+    return
+
 proc core_new
     mov rbx,rcx
     ccall calloc,1,E_BYTES
@@ -109,8 +137,17 @@ proc core_new
     mov [r12+E_TEXT],rax
     test rax,rax
     jz .fail
-    ccall time_fn,0
+    invoke core_now
     mov [r12+E_TIME],rax
+    mov [r12+E_FRACTION],rdx
+    lea rax,[r12+E_TIME]
+    ccall gmtime_fn,rax
+    lea r13,[rbp-200]
+    ccall strftime,r13,128,core_iso_base_fmt,rax
+    lea r14,[rbp-360]
+    ccall snprintf_fn,r14,128,core_iso_precise_fmt,r13,[r12+E_FRACTION]
+    invoke core_strdup,r14
+    mov [r12+E_DATE],rax
     mov rax,r12
     jmp .done
 .fail:

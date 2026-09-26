@@ -634,7 +634,7 @@ add_text:
  klass cDate
  msg sDate
  mov x2,x0
- load x0,gISO
+ load x0,gISOFractional
  msg sStringFromDate
  mov x2,x0
  mov x0,x22

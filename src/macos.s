@@ -3,6 +3,7 @@
 %include "abi.inc"
 %include "crt.inc"
 extern mkdir
+extern gettimeofday
 extern objc_getClass,sel_registerName,objc_msgSend,objc_allocateClassPair
 extern objc_registerClassPair,class_addMethod
 extern AXIsProcessTrusted,AXUIElementCreateSystemWide,AXUIElementCopyAttributeValue

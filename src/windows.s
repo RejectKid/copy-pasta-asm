@@ -14,6 +14,7 @@ extern MultiByteToWideChar, WideCharToMultiByte, GetEnvironmentVariableA
 extern CoInitializeEx, CoCreateInstance, CoUninitialize, SysFreeString, VariantClear
 extern GetDpiForWindow, SetProcessDpiAwarenessContext
 extern MoveFileExA
+extern GetSystemTimePreciseAsFileTime
 extern SetCapture,ReleaseCapture,SetCursor,ScreenToClient
 
 section .data

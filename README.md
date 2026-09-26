@@ -60,7 +60,8 @@ targets and uploads executables and macOS bundles as run artifacts.
   `CopyPastaAsm`. `COPY_PASTA_HISTORY` overrides the file for isolated tests.
 
 The original app's history is not modified. The same Text, CapturedAt, and Style
-fields are used. Linux retains the original X11/common-ASCII output limitation.
+fields are used, with fractional timestamps on new captures. Linux retains the
+original X11/common-ASCII output limitation.
 
 Assembly removes the managed runtime dependency; it does not itself prove better
 performance. Comparative startup, memory, and throughput remain unmeasured.

@@ -49,8 +49,9 @@ same workflow; check the run matching the commit.
   theme behavior, accessibility trees, and date formatting can differ by OS.
 * History uses `CopyPastaAsm` rather than `CopyPasta`, keeping original data intact.
   File fields are compatible. `COPY_PASTA_HISTORY` can select a file.
-* x64 newly captured dates currently have second precision. Imported timestamp
-  strings retain their fractional precision and timezone offsets.
+* Newly captured dates include fractional precision. Imported timestamp
+  strings retain their fractional precision and timezone offsets. Their JSON
+  spelling may differ from the original app's locally offset format.
 * Windows/Linux target x64; macOS has x64 and ARM64 builds. Other architectures
   are not implemented. Linux retains the original X11/common-ASCII limitation.
 * Accessibility depends on the source application and OS permissions. Fixtures
@@ -61,5 +62,4 @@ same workflow; check the run matching the commit.
 * No performance superiority is claimed. There is no managed runtime dependency,
   but comparative startup, memory, and throughput benchmarks remain unmeasured.
 
-Local mouse, keyboard, clipboard, and GUI testing remain paused while the owner
-uses the computer. New desktop integration tests run on disposable CI hosts.
+Desktop integration tests run on disposable CI hosts with isolated history files.

@@ -13,8 +13,10 @@ xdotool key ctrl+alt+c
 sleep 1
 python3 - <<'PY'
 import os,json
+import re
 h=json.load(open(os.environ['COPY_PASTA_HISTORY']))
 assert len(h)==1 and h[0]['Text']=='Assembly PRIMARY selection',h
+assert re.search(r'T\d\d:\d\d:\d\d\.\d{7}Z$',h[0]['CapturedAt']),h
 PY
 xdotool key ctrl+alt+c
 sleep 0.3

@@ -1,5 +1,6 @@
 """Native Cocoa fixture on the disposable CI Mac. Never changes TCC settings."""
 import json
+import re
 import os
 from pathlib import Path
 import subprocess
@@ -78,6 +79,7 @@ try:
     key(8)
     wait(lambda: len(json.loads(path.read_text()))==1,'AX selected-text capture failed')
     assert json.loads(path.read_text())[0]['Text']==text
+    assert re.search(r'T\d\d:\d\d:\d\d\.\d{3,7}Z$',json.loads(path.read_text())[0]['CapturedAt'])
     key(8); pump(.5)
     assert len(json.loads(path.read_text()))==1,'Duplicate promotion failed'
     edit.setString_(''); foreground()

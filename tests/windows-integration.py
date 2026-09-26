@@ -6,6 +6,7 @@ UIA capture and SendInput output, including Unicode, duplicates and cancellation
 import ctypes as C
 from ctypes import wintypes as W
 import json
+import re
 import os
 from pathlib import Path
 import subprocess
@@ -78,6 +79,7 @@ try:
     post(app, 0x312, 100, 0)
     wait_for(lambda: len(json.loads(history.read_text('utf-8'))) == 1, 'Selection capture failed')
     entry = json.loads(history.read_text('utf-8'))[0]
+    assert re.search(r'T\d\d:\d\d:\d\d\.\d{7}Z$', entry['CapturedAt']), entry
     assert entry['Text'] == text, entry
     post(app, 0x312, 100, 0)
     pump(1)

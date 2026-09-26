@@ -2,6 +2,7 @@
 %include "abi.inc"
 %include "crt.inc"
 extern mkdir
+extern gettimeofday
 extern gtk_init_check,gtk_window_new,gtk_window_set_title,gtk_window_set_default_size
 extern gtk_widget_set_size_request,gtk_container_set_border_width,gtk_container_add
 extern gtk_box_new,gtk_box_pack_start,gtk_box_pack_end,gtk_button_new_with_label
