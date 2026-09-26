@@ -806,6 +806,9 @@ valid_entry:
  msg sIsKind
  cbz w0,8f
  mov x0,x20
+ bl valid_calendar
+ cbz w0,8f
+ mov x0,x20
  bl parse_date
  cbz x0,8f
 1:
@@ -842,6 +845,101 @@ valid_entry:
  cmp x21,#6
  b.lo 2b
 7:
+ mov w0,#1
+ leave
+8:
+ mov w0,#0
+ leave
+
+// Reject normalized impossible calendar dates before ISO8601DateFormatter.
+valid_calendar:
+ enter
+ msg sUTF8String
+ mov x19,x0
+ cbz x19,8f
+ mov x20,#0
+ mov x21,#0
+ mov x22,#0
+ mov x23,#0
+1:
+ ldrb w9,[x19,x23]
+ cmp x23,#4
+ b.eq 2f
+ cmp x23,#7
+ b.eq 2f
+ cmp x23,#10
+ b.eq 3f
+ cmp x23,#13
+ b.eq 4f
+ cmp x23,#16
+ b.eq 4f
+ sub w9,w9,#48
+ cmp w9,#9
+ b.hi 8f
+ cmp x23,#4
+ b.lo 5f
+ cmp x23,#7
+ b.lo 6f
+ cmp x23,#10
+ b.lo 7f
+ b 9f
+2:
+ cmp w9,#45
+ b.ne 8f
+ b 9f
+3:
+ cmp w9,#84
+ b.ne 8f
+ b 9f
+4:
+ cmp w9,#58
+ b.ne 8f
+ b 9f
+5:
+ mov x10,#10
+ madd x20,x20,x10,x9
+ b 9f
+6:
+ mov x10,#10
+ madd x21,x21,x10,x9
+ b 9f
+7:
+ mov x10,#10
+ madd x22,x22,x10,x9
+9:
+ add x23,x23,#1
+ cmp x23,#19
+ b.lo 1b
+ cbz x20,8f
+ mov x10,#9999
+ cmp x20,x10
+ b.hi 8f
+ cbz x21,8f
+ cmp x21,#12
+ b.hi 8f
+ cbz x22,8f
+ addr x9,calendar_days
+ sub x10,x21,#1
+ ldrb w9,[x9,x10]
+ cmp x21,#2
+ b.ne 10f
+ mov x10,#4
+ udiv x11,x20,x10
+ msub x11,x11,x10,x20
+ cbnz x11,10f
+ mov x10,#100
+ udiv x11,x20,x10
+ msub x11,x11,x10,x20
+ cbnz x11,11f
+ mov x10,#400
+ udiv x11,x20,x10
+ msub x11,x11,x10,x20
+ cbnz x11,10f
+11:
+ add w9,w9,#1
+10:
+ cmp x22,x9
+ b.hi 8f
  mov w0,#1
  leave
 8:
@@ -1909,6 +2007,7 @@ kForeground: .asciz "ForegroundColor"
 kBackground: .asciz "BackgroundColor"
 .data
 .p2align 3
+calendar_days: .byte 31,28,31,30,31,30,31,31,30,31,30,31
 style_keys: .quad kFontName,kFontSize,kFontWeight,kItalic,kForeground,kBackground
 dInterval: .double 0.012
 gPool: .quad 0
