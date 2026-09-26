@@ -62,6 +62,11 @@ m_autoresize db 'setAutoresizingMask:',0
 m_set_doc db 'setDocumentView:',0
 m_vertical db 'setHasVerticalScroller:',0
 m_horizontal db 'setHasHorizontalScroller:',0
+m_hresize db 'setHorizontallyResizable:',0
+m_container db 'textContainer',0
+m_tracks_width db 'setWidthTracksTextView:',0
+m_container_size db 'setContainerSize:',0
+m_max_size db 'setMaxSize:',0
 m_column_init db 'initWithIdentifier:',0
 m_add_column db 'addTableColumn:',0
 m_data_source db 'setDataSource:',0
@@ -243,6 +248,12 @@ proc main
     mov [m_preview],rax
     invoke m_send,rax,m_editable,0,0
     invoke m_send,[m_preview],m_selectable,1,0
+    invoke m_send,[m_preview],m_hresize,1,0
+    invoke m_size,[m_preview],m_max_size,10000000,10000000
+    invoke m_send,[m_preview],m_container,0,0
+    mov r13,rax
+    invoke m_send,r13,m_tracks_width,0,0
+    invoke m_size,r13,m_container_size,10000000,10000000
     invoke m_send,r12,m_set_doc,[m_preview],0
     invoke m_class,m_NSFont
     mov r12,rax
@@ -333,6 +344,19 @@ proc m_string
     invoke m_send,rax,m_utf8,rbx,0
     return
 ; NSRect is a 32-byte aggregate passed on the x64 stack (not XMM arguments).
+; NSSize is two floating-point registers in the x64 Objective-C ABI.
+proc m_size
+    mov r12,rcx
+    mov r13,r8
+    mov r14,r9
+    ccall sel_registerName,rdx
+    mov rdi,r12
+    mov rsi,rax
+    cvtsi2sd xmm0,r13
+    cvtsi2sd xmm1,r14
+    call objc_msgSend
+    return
+
 proc m_rect
     mov rbx,rcx
     mov r12,r8

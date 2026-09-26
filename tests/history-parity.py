@@ -30,9 +30,15 @@ assert [e['Text'] for e in result]==[f'item {i}' for i in range(59,9,-1)],result
 for malformed in ('[', '[{"Text":"a"},]', '[{"Text":"a" "Style":null}]',
                   '[{"Text":"a","Style":{"FontSize":01}}]',
                   '[{"Text":"a","Style":{"FontSize":1e}}]', '[{"Text":"\\uZZZZ"}]',
-                  '[{"Text":"a"}]garbage'):
+                  '[{"Text":"a"}]garbage', '[{"Text":"a",}]',
+                  '[{"Text":"a","FutureField":+1}]',
+                  '[{"Text":"a","FutureField":1.}]',
+                  '[{"Text":"a","FutureField":tru}]',
+                  '[{"Text":"bad\\q"}]', '[{"Text":"raw\nnewline"}]'):
     assert roundtrip(malformed)==[],malformed
 
 unknown=[{'Text':'kept','CapturedAt':'2026-09-25T00:00:00Z','Style':None,'FutureField':{'nested':[1,2,3]}}]
 assert roundtrip(json.dumps(unknown))[0]['Text']=='kept'
+valid_numbers='[{"Text":"numbers","FutureField":[0,-0,1,-12,0.5,-1.25,1e3,1E-3,1e+3,true,false,null,{}]}]'
+assert roundtrip(valid_numbers)[0]['Text']=='numbers'
 print('PASS: UTF-8/UTF-16 escapes, all style fields, timezone offsets, sorted cap, malformed JSON, unknown fields')

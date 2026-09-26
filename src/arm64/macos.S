@@ -258,6 +258,20 @@ _main:
  store x0,gPreview
  mov x2,#0
  msg sEditable
+ load x0,gPreview
+ mov x2,#1
+ msg sHResizable
+ load x0,gPreview
+ addr x1,sMaxSize
+ bl large_size
+ load x0,gPreview
+ msg sTextContainer
+ mov x20,x0
+ mov x2,#0
+ msg sTracksWidth
+ mov x0,x20
+ addr x1,sContainerSize
+ bl large_size
  load x2,gPreview
  mov x0,x19
  msg sDocument
@@ -662,6 +676,21 @@ save_history:
 1:
  mov x0,#0
  leave
+// NSSize uses the d0/d1 homogeneous aggregate ABI on Apple Silicon.
+large_size:
+ enter
+ mov x19,x0
+ mov x0,x1
+ bl _sel_registerName
+ mov x1,x0
+ mov x0,x19
+ mov x9,#0x9680
+ movk x9,#0x98,lsl #16
+ ucvtf d0,x9
+ fmov d1,d0
+ bl _objc_msgSend
+ leave
+
 load_history:
  enter
  klass cData
@@ -1668,6 +1697,11 @@ sAutoresizing: .asciz "setAutoresizingMask:"
 sDocument: .asciz "setDocumentView:"
 sVScroll: .asciz "setHasVerticalScroller:"
 sHScroll: .asciz "setHasHorizontalScroller:"
+sHResizable: .asciz "setHorizontallyResizable:"
+sMaxSize: .asciz "setMaxSize:"
+sTextContainer: .asciz "textContainer"
+sTracksWidth: .asciz "setWidthTracksTextView:"
+sContainerSize: .asciz "setContainerSize:"
 sColumnInit: .asciz "initWithIdentifier:"
 sAddColumn: .asciz "addTableColumn:"
 sWidth: .asciz "setWidth:"
