@@ -43,6 +43,7 @@ for malformed in ('[', '[{"Text":"a"},]', '[{"Text":"a" "Style":null}]',
                   '[{"Text":"valid"},{"Text":123}]',
                   '[{"Text":"a","CapturedAt":123}]',
                   '[{"Text":"a","CapturedAt":"2026-02-30T12:00:00Z"}]',
+                  '[{"Text":"a","CapturedAt":"2026-09-25T25:30:00Z"}]',
                   '[{"Text":"a","CapturedAt":"2026-09-25T12:30:00+99:99"}]',
                   '[{"Text":"a","CapturedAt":"2026-09-25T12:30:00Zjunk"}]',
                   '[{"Text":"a","Style":{"FontName":[]}}]'):

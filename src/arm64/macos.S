@@ -946,6 +946,25 @@ valid_calendar:
 10:
  cmp x22,x9
  b.hi 8f
+ mov x23,#11
+ mov w24,#24
+21:
+ ldrb w9,[x19,x23]
+ sub w9,w9,#48
+ mov w10,#10
+ mul w9,w9,w10
+ add x25,x23,#1
+ ldrb w10,[x19,x25]
+ sub w10,w10,#48
+ add w9,w9,w10
+ cmp w9,w24
+ b.hs 8f
+ cmp x23,#17
+ b.eq 22f
+ add x23,x23,#3
+ mov w24,#60
+ b 21b
+22:
  // Require a real UTC designator or an offset within DateTimeOffset limits.
  mov x23,#19
  ldrb w9,[x19,x23]
