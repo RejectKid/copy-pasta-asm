@@ -11,7 +11,7 @@ try {
         Invoke-WebRequest 'https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip' -OutFile tools\nasm.zip
         Expand-Archive tools\nasm.zip tools -Force
     }
-    $vs = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft Visual Studio" -Filter link.exe -Recurse -ErrorAction SilentlyContinue |
+    $vs = Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft Visual Studio", "$env:ProgramFiles\Microsoft Visual Studio" -Filter link.exe -Recurse -ErrorAction SilentlyContinue |
         Where-Object FullName -match 'Hostx64\\x64\\link.exe$' | Sort-Object FullName -Descending | Select-Object -First 1
     if (!$vs) { throw 'Install Visual Studio C++ Build Tools and the Windows SDK.' }
     $sdk = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Lib" -Directory | Sort-Object Name -Descending | Select-Object -First 1
