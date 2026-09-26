@@ -39,7 +39,10 @@ for malformed in ('[', '[{"Text":"a"},]', '[{"Text":"a" "Style":null}]',
                   '[{"Text":"a","FutureField":+1}]',
                   '[{"Text":"a","FutureField":1.}]',
                   '[{"Text":"a","FutureField":tru}]',
-                  '[{"Text":"bad\\q"}]', '[{"Text":"raw\nnewline"}]'):
+                  '[{"Text":"bad\\q"}]', '[{"Text":"raw\nnewline"}]',
+                  '[{"Text":"valid"},{"Text":123}]',
+                  '[{"Text":"a","CapturedAt":123}]',
+                  '[{"Text":"a","Style":{"FontName":[]}}]'):
     assert roundtrip(malformed)==[],malformed
 
 unknown=[{'Text':'kept','CapturedAt':'2026-09-25T00:00:00Z','Style':None,'FutureField':{'nested':[1,2,3]}}]

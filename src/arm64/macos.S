@@ -732,7 +732,10 @@ load_history:
  mov x2,x0
  mov x0,x22
  msg sIsKind
- cbz w0,7f
+ cbz w0,85f
+ mov x0,x22
+ bl valid_entry
+ cbz w0,85f
  mov x0,x22
  load x1,gTextKey
  bl field
@@ -770,7 +773,79 @@ load_history:
  cbz x0,9f
  mov x0,#0
  store x0,gSelected
+ b 9f
+85:
+ load x0,gHistory
+ msg sRemoveAll
 9:
+ leave
+
+// Validate field classes before dispatching NSString/NSNumber messages.
+// Invalid known fields invalidate the entire file, as in the reference loader.
+valid_entry:
+ enter
+ mov x19,x0
+ addr x1,kText
+ bl style_value
+ cbz x0,10f
+ mov x20,x0
+ klass cString
+ mov x2,x0
+ mov x0,x20
+ msg sIsKind
+ cbz w0,8f
+10:
+ mov x0,x19
+ load x1,gDateKey
+ bl field
+ cbz x0,1f
+ mov x20,x0
+ klass cString
+ mov x2,x0
+ mov x0,x20
+ msg sIsKind
+ cbz w0,8f
+ mov x0,x20
+ bl parse_date
+ cbz x0,8f
+1:
+ mov x0,x19
+ addr x1,kStyle
+ bl style_value
+ cbz x0,7f
+ mov x20,x0
+ klass cImmutableDictionary
+ mov x2,x0
+ mov x0,x20
+ msg sIsKind
+ cbz w0,8f
+ mov x21,#0
+ addr x22,style_keys
+2:
+ mov x0,x20
+ ldr x1,[x22,x21,lsl #3]
+ bl style_value
+ cbz x0,5f
+ mov x23,x0
+ cbnz x21,3f
+ klass cString
+ b 4f
+3:
+ klass cNumber
+4:
+ mov x2,x0
+ mov x0,x23
+ msg sIsKind
+ cbz w0,8f
+5:
+ add x21,x21,#1
+ cmp x21,#6
+ b.lo 2b
+7:
+ mov w0,#1
+ leave
+8:
+ mov w0,#0
  leave
 
 // Table data source callbacks use the native Objective-C ABI.
@@ -1661,6 +1736,7 @@ cISO: .asciz "NSISO8601DateFormatter"
 cDateFormatter: .asciz "NSDateFormatter"
 cData: .asciz "NSData"
 cJSON: .asciz "NSJSONSerialization"
+cNumber: .asciz "NSNumber"
 cFileManager: .asciz "NSFileManager"
 cIndexSet: .asciz "NSIndexSet"
 cCharacterSet: .asciz "NSCharacterSet"
