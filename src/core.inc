@@ -141,10 +141,8 @@ proc core_new
     mov [r12+E_FRACTION],rdx
     lea rax,[r12+E_TIME]
     ccall gmtime_fn,rax
-    lea r13,[rbp-200]
-    ccall strftime,r13,128,core_iso_base_fmt,rax
-    lea r14,[rbp-360]
-    ccall strcpy,r14,r13
+    lea r14,[rbp-240]
+    ccall strftime,r14,128,core_iso_base_fmt,rax
     ccall strlen,r14
     lea rdi,[r14+rax]
     mov byte [rdi],'.'
