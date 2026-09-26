@@ -38,7 +38,7 @@
  addr x0,\name
  bl _objc_getClass
 .endm
-.macro str name
+.macro stringlit name
  addr x0,\name
  bl string
 .endm
@@ -102,7 +102,7 @@ _main:
  mov x4,#0
  bl _objc_msgSend
  store x0,gWindow
- str tTitle
+ stringlit tTitle
  mov x2,x0
  load x0,gWindow
  msg sTitle
@@ -189,7 +189,7 @@ _main:
  klass cColumn
  msg sAlloc
  mov x20,x0
- str tHistory
+ stringlit tHistory
  mov x2,x0
  mov x0,x20
  msg sColumnInit
@@ -416,7 +416,7 @@ init_path:
 1:
  bl _NSHomeDirectory
  mov x19,x0
- str tDirectory
+ stringlit tDirectory
  mov x2,x0
  mov x0,x19
  msg sAppendPath
@@ -428,7 +428,7 @@ init_path:
  mov x4,#0
  mov x5,#0
  msg sCreateDir
- str tFilename
+ stringlit tFilename
  mov x2,x0
  mov x0,x19
  msg sAppendPath
@@ -448,13 +448,13 @@ init_path:
  load x0,gDateFormatter
  mov x2,#1
  msg sTimeStyle
- str kText
+ stringlit kText
  msg sRetain
  store x0,gTextKey
- str kStyle
+ stringlit kStyle
  msg sRetain
  store x0,gStyleKey
- str kDate
+ stringlit kDate
  msg sRetain
  store x0,gDateKey
  leave
@@ -659,25 +659,25 @@ cell:
  load x1,gTextKey
  bl field
  mov x20,x0
- str tCR
+ stringlit tCR
  mov x21,x0
- str tSpace
+ stringlit tSpace
  mov x3,x0
  mov x2,x21
  mov x0,x20
  msg sReplace
  mov x20,x0
- str tLF
+ stringlit tLF
  mov x21,x0
- str tSpace
+ stringlit tSpace
  mov x3,x0
  mov x2,x21
  mov x0,x20
  msg sReplace
  mov x20,x0
- str tTab
+ stringlit tTab
  mov x21,x0
- str tSpace
+ stringlit tSpace
  mov x3,x0
  mov x2,x21
  mov x0,x20
@@ -691,7 +691,7 @@ cell:
  mov x20,x0
  msg sLength
  cbnz x0,1f
- str tWhitespace
+ stringlit tWhitespace
  mov x20,x0
 1:
  mov x0,x20
@@ -702,7 +702,7 @@ cell:
  mov x2,#73
  msg sSubstring
  mov x20,x0
- str tEllipsis
+ stringlit tEllipsis
  mov x2,x0
  mov x0,x20
  msg sAppend
@@ -711,7 +711,7 @@ cell:
  mov x0,x19
  bl entry_date
  mov x21,x0
- str tTwoSpaces
+ stringlit tTwoSpaces
  mov x2,x0
  mov x0,x21
  msg sAppend
@@ -719,7 +719,7 @@ cell:
  msg sAppend
  leave
 8:
- str tEmpty
+ stringlit tEmpty
  leave
 entry_date:
  enter
@@ -735,7 +735,7 @@ entry_date:
  msg sStringFromDate
  leave
 1:
- str tEmpty
+ stringlit tEmpty
  leave
 refresh:
  enter
@@ -796,11 +796,11 @@ preview_update:
  bl preview_font
  leave
 8:
- str tEmpty
+ stringlit tEmpty
  mov x2,x0
  load x0,gPreview
  msg sSetString
- str tZero
+ stringlit tZero
  mov x2,x0
  load x0,gDetails
  msg sValue
@@ -957,7 +957,7 @@ capture:
  enter
  bl _AXUIElementCreateSystemWide
  mov x19,x0
- str tAXFocus
+ stringlit tAXFocus
  mov x1,x0
  mov x0,x19
  add x2,sp,#104
@@ -965,7 +965,7 @@ capture:
  bl _AXUIElementCopyAttributeValue
  cbnz w0,7f
  ldr x20,[sp,#104]
- str tAXSelection
+ stringlit tAXSelection
  mov x1,x0
  mov x0,x20
  add x2,sp,#112
@@ -1128,11 +1128,11 @@ tick:
  leave
 self_test:
  enter
- str tTestText
+ stringlit tTestText
  bl add_text
- str tTestOther
+ stringlit tTestOther
  bl add_text
- str tTestText
+ stringlit tTestText
  bl add_text
  load x0,gHistory
  msg sCount

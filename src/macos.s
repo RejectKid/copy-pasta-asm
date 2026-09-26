@@ -449,7 +449,9 @@ proc m_accessibility_init
     test rax,rax
     jz .failed
     ccall CFRunLoopGetCurrent
-    ccall CFRunLoopAddSource,rax,[m_run_source],[kCFRunLoopCommonModes]
+    mov rdx,[rel kCFRunLoopCommonModes wrt ..gotpcrel]
+    mov rdx,[rdx]
+    ccall CFRunLoopAddSource,rax,[m_run_source],rdx
     ccall CGEventTapEnable,[m_tap],1
     return
 .permission:

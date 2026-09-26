@@ -968,8 +968,8 @@ proc core_self_test
     mov rbx,rax
     invoke core_add,rbx
     invoke core_length,core_test_text
-    cmp eax,25
-    ; Character count is also checked by the external fixture runner.
+    cmp eax,23
+    jne .bad
     invoke core_new,core_test_other
     invoke core_add,rax
     invoke core_new,core_test_text
