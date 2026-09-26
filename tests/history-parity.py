@@ -42,6 +42,9 @@ for malformed in ('[', '[{"Text":"a"},]', '[{"Text":"a" "Style":null}]',
                   '[{"Text":"bad\\q"}]', '[{"Text":"raw\nnewline"}]',
                   '[{"Text":"valid"},{"Text":123}]',
                   '[{"Text":"a","CapturedAt":123}]',
+                  '[{"Text":"a","CapturedAt":"2026-02-30T12:00:00Z"}]',
+                  '[{"Text":"a","CapturedAt":"2026-09-25T12:30:00+99:99"}]',
+                  '[{"Text":"a","CapturedAt":"2026-09-25T12:30:00Zjunk"}]',
                   '[{"Text":"a","Style":{"FontName":[]}}]'):
     assert roundtrip(malformed)==[],malformed
 

@@ -1119,6 +1119,11 @@ proc core_load
 .datevalue:
     cmp eax,256
     jne .invalid
+    invoke core_parse_date,json_token
+    mov r11,0x8000000000000000
+    cmp rax,r11
+    je .invalid
+    mov [rbx+E_TIME],rax
     ccall free,[rbx+E_DATE]
     invoke core_strdup,json_token
     mov [rbx+E_DATE],rax
@@ -1126,8 +1131,6 @@ proc core_load
     jz .invalid
     invoke core_date_fraction,json_token
     mov [rbx+E_FRACTION],rax
-    invoke core_parse_date,json_token
-    mov [rbx+E_TIME],rax
     jmp .field
 .stylevalue:
     cmp eax,260
@@ -1245,8 +1248,113 @@ proc core_date_fraction
 proc core_parse_date
     mov rbx,rcx
     ccall strlen,rbx
-    cmp rax,19
+    cmp rax,20
     jb .bad
+    cmp rax,42
+    ja .bad
+    xor r14d,r14d
+.fixed:
+    mov al,[rbx+r14]
+    cmp r14d,4
+    je .hyphen
+    cmp r14d,7
+    je .hyphen
+    cmp r14d,10
+    je .tee
+    cmp r14d,13
+    je .colon
+    cmp r14d,16
+    je .colon
+    sub al,'0'
+    cmp al,9
+    ja .bad
+    jmp .next_fixed
+.hyphen:
+    cmp al,'-'
+    jne .bad
+    jmp .next_fixed
+.tee:
+    cmp al,'T'
+    jne .bad
+    jmp .next_fixed
+.colon:
+    cmp al,':'
+    jne .bad
+.next_fixed:
+    inc r14d
+    cmp r14d,19
+    jb .fixed
+    lea r15,[rbx+19]
+    cmp byte [r15],'.'
+    jne .zone
+    inc r15
+    xor r14d,r14d
+.fraction:
+    mov al,[r15]
+    sub al,'0'
+    cmp al,9
+    ja .fraction_end
+    inc r15
+    inc r14d
+    cmp r14d,16
+    ja .bad
+    jmp .fraction
+.fraction_end:
+    test r14d,r14d
+    jz .bad
+.zone:
+    mov al,[r15]
+    cmp al,'Z'
+    je .utc
+    cmp al,'+'
+    je .zone_offset
+    cmp al,'-'
+    jne .bad
+.zone_offset:
+    cmp byte [r15+3],':'
+    jne .bad
+    cmp byte [r15+6],0
+    jne .bad
+    mov r14d,1
+.offset_digits:
+    mov al,[r15+r14]
+    sub al,'0'
+    cmp al,9
+    ja .bad
+    inc r14d
+    cmp r14d,3
+    je .skip_colon
+    cmp r14d,6
+    jb .offset_digits
+    jmp .offset_range
+.skip_colon:
+    inc r14d
+    jmp .offset_digits
+.offset_range:
+    movzx eax,byte [r15+1]
+    sub eax,'0'
+    imul eax,10
+    movzx edx,byte [r15+2]
+    lea eax,[rax+rdx-'0']
+    cmp eax,14
+    ja .bad
+    mov r14d,eax
+    movzx eax,byte [r15+4]
+    sub eax,'0'
+    imul eax,10
+    movzx edx,byte [r15+5]
+    lea eax,[rax+rdx-'0']
+    cmp eax,59
+    ja .bad
+    cmp r14d,14
+    jne .parsed_syntax
+    test eax,eax
+    jnz .bad
+    jmp .parsed_syntax
+.utc:
+    cmp byte [r15+1],0
+    jne .bad
+.parsed_syntax:
     lea r12,[rbp-160]
     ccall memset,r12,0,64
     lea rax,[r12+20]
@@ -1257,41 +1365,46 @@ proc core_parse_date
     ccall sscanf,rbx,core_iso_scan,rax,rcx,rdx,r8,r9,r12
     cmp eax,6
     jne .bad
+    cmp dword [r12+20],1
+    jl .bad
+    cmp dword [r12+20],9999
+    jg .bad
     sub dword [r12+20],1900
     dec dword [r12+16]
+    lea rax,[rbp-240]
+    ccall memcpy,rax,r12,24
     ccall timegm_fn,r12
     mov r13,rax
+    lea rax,[rbp-248]
+    mov [rax],r13
+    ccall gmtime_fn,rax
+    test rax,rax
+    jz .bad
+    lea rcx,[rbp-240]
+    ccall memcmp,rcx,rax,24
+    test eax,eax
+    jnz .bad
     ; ISO offsets begin after seconds/fraction. Convert local timestamp to UTC.
-    lea rsi,[rbx+19]
-.seek:
-    mov al,[rsi]
-    test al,al
-    jz .done
+    mov al,[r15]
     cmp al,'Z'
     je .done
-    cmp al,'+'
-    je .offset
-    cmp al,'-'
-    je .offset
-    inc rsi
-    jmp .seek
 .offset:
     mov r14d,1
     cmp al,'+'
     je .digits
     mov r14d,-1
 .digits:
-    movzx eax,byte [rsi+1]
+    movzx eax,byte [r15+1]
     sub eax,'0'
     imul eax,10
-    movzx edx,byte [rsi+2]
+    movzx edx,byte [r15+2]
     lea eax,[rax+rdx-'0']
     imul eax,60
-    movzx edx,byte [rsi+4]
+    movzx edx,byte [r15+4]
     sub edx,'0'
     imul edx,10
     add eax,edx
-    movzx edx,byte [rsi+5]
+    movzx edx,byte [r15+5]
     lea eax,[rax+rdx-'0']
     imul eax,60
     imul eax,r14d
@@ -1301,7 +1414,7 @@ proc core_parse_date
     mov rax,r13
     return
 .bad:
-    xor eax,eax
+    mov rax,0x8000000000000000
     return
 
 ; Validate the entire JSON grammar before interpreting any entries. Depth is
