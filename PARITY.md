@@ -26,22 +26,24 @@ The first all-platform passing run after strict ARM64 JSON validation is
 [36207965320](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36207965320).
 The preview scrolling regression run is
 [36208023779](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36208023779).
-Timestamp preservation and field validation also passed all four platforms in
-[36208155178](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36208155178)
-at `bb66d52`; neither macOS integration test was skipped. Later changes use the
-same workflow; check the run matching the commit.
+The current source passed all four platforms in
+[36252535319](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36252535319)
+at `8ede0dc`. This includes native capture and typing on both Mac architectures;
+neither integration test was skipped. Later changes use the same workflow; check
+the run matching the commit.
 
 * Assembly self-tests: history insertion, duplicate promotion, cap, Unicode,
   persistence, and removal.
 * Real executable file tests: UTF-8 and UTF-16 escapes, all six style fields,
   timezone offsets, fractional timestamp preservation and ordering, newest-50
-  selection, malformed JSON, invalid field types, and unknown nested fields.
+  selection, malformed JSON, invalid field types, impossible dates and offsets,
+  and unknown nested fields.
 * Windows native fixture: capture, Unicode typing, duplicates, cancellation,
   removing an entry while typing its owned snapshot, and persisted clearing.
 * Linux isolated X11 fixture: PRIMARY capture, duplicate promotion, global
   hotkeys, and actual ASCII output to a terminal target.
-* Both macOS native fixtures: AX selection, hotkeys, duplicates, Unicode output,
-  cancellation, UI startup, and screenshot artifacts.
+* Both macOS native fixtures: AX selection, hotkeys, duplicates, supplementary
+  Unicode and emoji output, cancellation, UI startup, and screenshot artifacts.
 
 ## Differences and verification limits
 
