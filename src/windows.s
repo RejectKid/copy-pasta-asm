@@ -36,6 +36,7 @@ w_history_env db 'COPY_PASTA_HISTORY',0
 w_subdir db '\CopyPastaAsm',0
 w_filename db '\history.json',0
 w_testarg dw __utf16__('--self-test'),0
+w_roundtrip dw __utf16__('--roundtrip'),0
 w_hotkey_error db 'One or more global hotkeys are already in use by another app.',0
 w_native_source db 'native edit control',0
 w_uia_source db 'UI Automation',0
@@ -102,11 +103,22 @@ proc start
     repe cmpsw
     pop rsi
     je .test
+    mov rdi,w_roundtrip
+    mov rcx,11
+    push rsi
+    repe cmpsw
+    pop rsi
+    je .roundtrip
 .argnext:
     add rsi,2
     jmp .arg
 .test:
     invoke core_self_test
+    invoke ExitProcess,rax
+.roundtrip:
+    invoke core_load
+    invoke core_save
+    xor eax,1
     invoke ExitProcess,rax
 .gui:
     invoke CoInitializeEx,0,2

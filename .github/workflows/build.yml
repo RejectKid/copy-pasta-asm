@@ -8,6 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/build-macos.sh --test
+      - run: python3 tests/history-parity.py build/copy-pasta-asm
       - run: python3 tests/macos-smoke.py
       - run: |
           python3 -m venv build/test-venv
@@ -19,6 +20,7 @@ jobs:
           name: macos-arm64
           path: |
             build/copy-pasta-asm
+            build/CopyPastaAsm-macos.zip
             build/ui.png
             build/integration-failure.png
   macos-intel:
@@ -27,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: brew install nasm
       - run: bash scripts/build-macos.sh --test
+      - run: python3 tests/history-parity.py build/copy-pasta-asm
       - run: python3 tests/macos-smoke.py
       - run: |
           python3 -m venv build/test-venv
@@ -38,6 +41,7 @@ jobs:
           name: macos-x64
           path: |
             build/copy-pasta-asm
+            build/CopyPastaAsm-macos.zip
             build/ui.png
             build/integration-failure.png
   windows:
@@ -47,6 +51,7 @@ jobs:
       - name: Build and test Windows x64
         shell: pwsh
         run: ./scripts/build-windows.ps1 -Test
+      - run: python tests/history-parity.py build/copy-pasta-asm.exe
       - name: Test capture and typing on the disposable runner desktop
         run: python tests/windows-integration.py
       - uses: actions/upload-artifact@v4
@@ -59,6 +64,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y nasm libgtk-3-dev libx11-dev libxtst-dev xvfb xdotool xterm xclip
       - run: bash scripts/build-linux.sh --test
+      - run: python3 tests/history-parity.py build/copy-pasta-asm
       - name: Start the native UI in an isolated X11 display
         run: xvfb-run -a timeout 5 build/copy-pasta-asm || test "$?" = 124
       - name: Exercise capture and typing in an isolated X11 display

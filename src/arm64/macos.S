@@ -74,8 +74,18 @@ _main:
  ldr x0,[x20,#8]
  addr x1,tTest
  bl _strcmp
- cbnz w0,1f
+ cbnz w0,2f
  bl self_test
+ leave
+2:
+ ldr x0,[x20,#8]
+ addr x1,tRoundtrip
+ bl _strcmp
+ cbnz w0,1f
+ bl load_history
+ bl save_history
+ cmp w0,#0
+ cset w0,eq
  leave
 1:
  klass cApplication
@@ -519,6 +529,12 @@ init_path:
  msg sAlloc
  msg sInit
  store x0,gISO
+ klass cISO
+ msg sAlloc
+ msg sInit
+ store x0,gISOFractional
+ mov x2,#3955
+ msg sFormatOptions
  klass cDateFormatter
  msg sAlloc
  msg sInit
@@ -671,10 +687,6 @@ load_history:
 1:
  cmp x21,x20
  b.hs 8f
- load x0,gHistory
- msg sCount
- cmp x0,#50
- b.hs 8f
  mov x0,x19
  mov x2,x21
  msg sObjectAtIndex
@@ -703,6 +715,19 @@ load_history:
  add x21,x21,#1
  b 1b
 8:
+ load x0,gHistory
+ addr x2,compare_entries
+ mov x3,#0
+ msg sSortFunction
+81:
+ load x0,gHistory
+ msg sCount
+ cmp x0,#50
+ b.ls 82f
+ load x0,gHistory
+ msg sRemoveLast
+ b 81b
+82:
  load x0,gHistory
  msg sCount
  cbz x0,9f
@@ -809,9 +834,7 @@ entry_date:
  load x1,gDateKey
  bl field
  cbz x0,1f
- mov x2,x0
- load x0,gISO
- msg sDateFromString
+ bl parse_date
  cbz x0,1f
  mov x2,x0
  load x0,gDateFormatter
@@ -819,6 +842,42 @@ entry_date:
  leave
 1:
  stringlit tEmpty
+ leave
+parse_date:
+ enter
+ mov x19,x0
+ cbz x19,1f
+ mov x2,x0
+ load x0,gISO
+ msg sDateFromString
+ cbnz x0,1f
+ load x0,gISOFractional
+ mov x2,x19
+ msg sDateFromString
+1:
+ leave
+compare_entries:
+ enter
+ mov x19,x0
+ mov x20,x1
+ load x1,gDateKey
+ bl field
+ bl parse_date
+ mov x21,x0
+ mov x0,x20
+ load x1,gDateKey
+ bl field
+ bl parse_date
+ cbz x0,1f
+ cbz x21,2f
+ mov x2,x21
+ msg sCompare
+ leave
+1:
+ mov x0,#1
+ leave
+2:
+ mov x0,#-1
  leave
 refresh:
  enter
@@ -1428,6 +1487,12 @@ tick:
  cbz x22,6f
  cbz x23,6f
  mov x0,x22
+ mov x1,#0
+ bl _CGEventSetFlags
+ mov x0,x23
+ mov x1,#0
+ bl _CGEventSetFlags
+ mov x0,x22
  mov x1,#1
  add x2,sp,#104
  bl _CGEventKeyboardSetUnicodeString
@@ -1641,6 +1706,9 @@ sNull: .asciz "null"
 sDate: .asciz "date"
 sStringFromDate: .asciz "stringFromDate:"
 sDateFromString: .asciz "dateFromString:"
+sFormatOptions: .asciz "setFormatOptions:"
+sSortFunction: .asciz "sortUsingFunction:context:"
+sCompare: .asciz "compare:"
 sDateStyle: .asciz "setDateStyle:"
 sTimeStyle: .asciz "setTimeStyle:"
 sAppendPath: .asciz "stringByAppendingPathComponent:"
@@ -1691,6 +1759,7 @@ tEnv: .asciz "COPY_PASTA_HISTORY"
 tDirectory: .asciz "Library/Application Support/CopyPastaAsm"
 tFilename: .asciz "history.json"
 tTest: .asciz "--self-test"
+tRoundtrip: .asciz "--roundtrip"
 tTestText: .asciz "Hello\r\nassembly \303\251 \360\237\215\235\t\"\\"
 tTestOther: .asciz "Another item"
 tItemFormat: .asciz "item %u"
@@ -1740,6 +1809,7 @@ gDetails: .quad 0
 gStatus: .quad 0
 gPath: .quad 0
 gISO: .quad 0
+gISOFractional: .quad 0
 gDateFormatter: .quad 0
 gTextKey: .quad 0
 gStyleKey: .quad 0

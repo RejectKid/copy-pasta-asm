@@ -65,7 +65,7 @@ def foreground():
 def key(code):
     for down in (True,False):
         event=Q.CGEventCreateKeyboardEvent(None,code,down)
-        Q.CGEventSetFlags(event,Q.kCGEventFlagMaskControl|Q.kCGEventFlagMaskAlternate)
+        Q.CGEventSetFlags(event,(Q.kCGEventFlagMaskControl|Q.kCGEventFlagMaskAlternate) if down else 0)
         Q.CGEventPost(Q.kCGHIDEventTap,event)
     pump(.1)
 

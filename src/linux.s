@@ -21,6 +21,8 @@ extern XQueryKeymap
 extern gtk_widget_override_font,gtk_widget_override_color,gtk_widget_override_background_color
 extern pango_font_description_new,pango_font_description_set_family,pango_font_description_set_absolute_size
 extern pango_font_description_set_weight,pango_font_description_set_style,pango_font_description_free
+extern gdk_pixbuf_loader_new,gdk_pixbuf_loader_write,gdk_pixbuf_loader_close
+extern gdk_pixbuf_loader_get_pixbuf,gtk_window_set_icon,g_object_unref
 section .data
 l_title db 'Copy Pasta ASM',0
 l_remove db 'Remove',0
@@ -39,6 +41,7 @@ l_path_fmt db '%s/CopyPastaAsm',0
 l_file_fmt db '%s/history.json',0
 l_str_fmt db '%s',0
 l_testarg db '--self-test',0
+l_roundtrip db '--roundtrip',0
 l_no_x11 db 'Global hotkeys require X11; Wayland is not supported.',0
 l_hotkey_error db 'One or more global hotkeys are already in use by another app.',0
 l_source db 'X11 PRIMARY selection',0
@@ -88,8 +91,16 @@ proc main
     jb .gui
     ccall strcmp,[r13+8],l_testarg
     test eax,eax
-    jnz .gui
+    jnz .roundtrip_check
     invoke core_self_test
+    return
+.roundtrip_check:
+    ccall strcmp,[r13+8],l_roundtrip
+    test eax,eax
+    jnz .gui
+    invoke core_load
+    invoke core_save
+    xor eax,1
     return
 .gui:
     ccall gtk_init_check,0,0
@@ -98,6 +109,13 @@ proc main
     ccall gtk_window_new,0
     mov [l_window],rax
     ccall gtk_window_set_title,rax,l_title
+    ccall gdk_pixbuf_loader_new
+    mov r12,rax
+    ccall gdk_pixbuf_loader_write,r12,l_png,l_png_end-l_png,0
+    ccall gdk_pixbuf_loader_close,r12,0
+    ccall gdk_pixbuf_loader_get_pixbuf,r12
+    ccall gtk_window_set_icon,[l_window],rax
+    ccall g_object_unref,r12
     ccall gtk_window_set_default_size,[l_window],980,620
     ccall gtk_widget_set_size_request,[l_window],760,480
     ccall gtk_box_new,1,10
@@ -624,5 +642,7 @@ proc l_type_tick
 section .data
 l_keysyms dd 'c','v','x'
 l_modifiers dd 12,14,28,30
+l_png: incbin "assets/app-icon.png"
+l_png_end:
 %include "core.inc"
 section .note.GNU-stack noalloc noexec nowrite progbits

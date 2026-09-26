@@ -12,6 +12,7 @@ extern kCFRunLoopCommonModes
 extern fflush
 extern CGEventTapCreate,CGEventTapEnable,CGEventGetFlags,CGEventGetIntegerValueField
 extern CGEventCreateKeyboardEvent,CGEventKeyboardSetUnicodeString,CGEventPost
+extern CGEventSetFlags
 section .data
 m_title db 'Copy Pasta ASM',0
 m_NSObject db 'NSObject',0
@@ -110,6 +111,7 @@ m_dir_fmt db '%s/Library/Application Support/CopyPastaAsm',0
 m_file_fmt db '%s/history.json',0
 m_str_fmt db '%s',0
 m_testarg db '--self-test',0
+m_roundtrip db '--roundtrip',0
 m_permission db 'macOS Accessibility permission is required for hotkeys, capture, and typing.',0
 m_tap_error db 'Could not create keyboard event tap. Check Accessibility/Input Monitoring permissions.',0
 m_source db 'macOS Accessibility',0
@@ -149,8 +151,16 @@ proc main
     jb .gui
     ccall strcmp,[r13+8],m_testarg
     test eax,eax
-    jnz .gui
+    jnz .roundtrip_check
     invoke core_self_test
+    return
+.roundtrip_check:
+    ccall strcmp,[r13+8],m_roundtrip
+    test eax,eax
+    jnz .gui
+    invoke core_load
+    invoke core_save
+    xor eax,1
     return
 .gui:
     invoke m_class,m_NSPool
@@ -785,6 +795,8 @@ proc m_tick
     jz .failed
     test r13,r13
     jz .failed
+    ccall CGEventSetFlags,r12,0
+    ccall CGEventSetFlags,r13,0
     ccall CGEventKeyboardSetUnicodeString,r12,1,m_char
     ccall CGEventKeyboardSetUnicodeString,r13,1,m_char
     ccall CGEventPost,0,r12
