@@ -14,11 +14,13 @@ jobs:
           build/test-venv/bin/pip install pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-ApplicationServices
           build/test-venv/bin/python tests/macos-integration.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: macos-arm64
           path: |
             build/copy-pasta-asm
             build/ui.png
+            build/integration-failure.png
   macos-intel:
     runs-on: macos-15-intel
     steps:
@@ -31,11 +33,13 @@ jobs:
           build/test-venv/bin/pip install pyobjc-framework-Cocoa pyobjc-framework-Quartz pyobjc-framework-ApplicationServices
           build/test-venv/bin/python tests/macos-integration.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: macos-x64
           path: |
             build/copy-pasta-asm
             build/ui.png
+            build/integration-failure.png
   windows:
     runs-on: windows-latest
     steps:

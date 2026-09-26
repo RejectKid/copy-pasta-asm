@@ -29,6 +29,8 @@ m_NSColor db 'NSColor',0
 m_NSFontManager db 'NSFontManager',0
 m_NSTimer db 'NSTimer',0
 m_NSPool db 'NSAutoreleasePool',0
+m_NSSplitView db 'NSSplitView',0
+m_NSView db 'NSView',0
 m_delegate_name db 'CopyPastaAssemblyDelegate',0
 m_alloc db 'alloc',0
 m_init db 'init',0
@@ -81,6 +83,10 @@ m_color_rgb db 'colorWithCalibratedRed:green:blue:alpha:',0
 m_text_color db 'setTextColor:',0
 m_background_color db 'setBackgroundColor:',0
 m_color_scale dq 255.0
+m_set_vertical db 'setVertical:',0
+m_divider_style db 'setDividerStyle:',0
+m_split_position db 'setPosition:ofDividerAtIndex:',0
+m_min_size db 'setMinSize:',0
 m_remove_sel db 'removeItem:',0
 m_clear_sel db 'clearItems:',0
 m_tick_sel db 'tick:',0
@@ -112,6 +118,10 @@ m_ax_selection db 'AXSelectedText',0
 m_app dq 0
 m_window dq 0
 m_content_view dq 0
+m_root_view dq 0
+m_left_view dq 0
+m_right_view dq 0
+m_split_view dq 0
 m_delegate dq 0
 m_table dq 0
 m_preview dq 0
@@ -161,23 +171,33 @@ proc main
     invoke m_send,[m_window],m_set_delegate,[m_delegate],0
     invoke m_send,[m_window],m_content,0,0
     mov [m_content_view],rax
+    mov [m_root_view],rax
+    invoke m_make_split
     ; Cocoa coordinates start at the bottom left.
     invoke m_button,m_remove,10,574,m_remove_sel
     invoke m_button,m_clear,100,574,m_clear_sel
     invoke m_label,m_help,190,580,770,24
-    invoke m_label,m_history_label,10,538,360,24
-    invoke m_label,m_preview_label,388,538,580,24
+    mov rax,[m_left_view]
+    mov [m_content_view],rax
+    invoke m_label,m_history_label,0,502,360,24
+    mov rax,[m_right_view]
+    mov [m_content_view],rax
+    invoke m_label,m_preview_label,0,502,592,24
+    mov rax,[m_root_view]
+    mov [m_content_view],rax
     invoke m_label,core_ready,8,4,960,24
     mov [m_status],rax
-    invoke m_label,core_zero,388,32,580,24
+    mov rax,[m_right_view]
+    mov [m_content_view],rax
+    invoke m_label,core_zero,0,0,592,24
     mov [m_details],rax
     invoke m_class,m_NSScrollView
     invoke m_send,rax,m_alloc,0,0
-    invoke m_rect,rax,m_frame,10,32,360,502,0
+    invoke m_rect,rax,m_frame,0,0,360,496,0
     mov r12,rax
     invoke m_send,r12,m_vertical,1,0
-    invoke m_send,r12,m_autoresize,16,0
-    invoke m_send,[m_content_view],m_add,r12,0
+    invoke m_send,r12,m_autoresize,18,0
+    invoke m_send,[m_left_view],m_add,r12,0
     invoke m_class,m_NSTableView
     invoke m_send,rax,m_alloc,0,0
     invoke m_rect,rax,m_frame,0,0,360,502,0
@@ -202,12 +222,12 @@ proc main
     invoke m_send,r12,m_set_doc,[m_table],0
     invoke m_class,m_NSScrollView
     invoke m_send,rax,m_alloc,0,0
-    invoke m_rect,rax,m_frame,388,66,580,468,0
+    invoke m_rect,rax,m_frame,0,34,592,462,0
     mov r12,rax
     invoke m_send,r12,m_vertical,1,0
     invoke m_send,r12,m_horizontal,1,0
     invoke m_send,r12,m_autoresize,18,0
-    invoke m_send,[m_content_view],m_add,r12,0
+    invoke m_send,[m_right_view],m_add,r12,0
     invoke m_class,m_NSTextView
     invoke m_send,rax,m_alloc,0,0
     invoke m_rect,rax,m_frame,0,0,580,468,0
@@ -256,6 +276,41 @@ proc main
 
 proc m_class
     ccall objc_getClass,rcx
+    return
+proc m_make_split
+    invoke m_class,m_NSSplitView
+    invoke m_send,rax,m_alloc,0,0
+    invoke m_rect,rax,m_frame,10,32,960,526,0
+    mov [m_split_view],rax
+    invoke m_send,rax,m_set_vertical,1,0
+    invoke m_send,[m_split_view],m_divider_style,1,0
+    invoke m_send,[m_split_view],m_autoresize,18,0
+    invoke m_send,[m_root_view],m_add,[m_split_view],0
+    invoke m_class,m_NSView
+    invoke m_send,rax,m_alloc,0,0
+    invoke m_rect,rax,m_frame,0,0,360,526,0
+    mov [m_left_view],rax
+    invoke m_send,[m_split_view],m_add,rax,0
+    invoke m_class,m_NSView
+    invoke m_send,rax,m_alloc,0,0
+    invoke m_rect,rax,m_frame,368,0,592,526,0
+    mov [m_right_view],rax
+    invoke m_send,[m_split_view],m_add,rax,0
+    ccall sel_registerName,m_split_position
+    mov rsi,rax
+    mov rdi,[m_split_view]
+    xor edx,edx
+    mov eax,360
+    cvtsi2sd xmm0,eax
+    call objc_msgSend
+    ccall sel_registerName,m_min_size
+    mov rsi,rax
+    mov rdi,[m_window]
+    mov eax,760
+    cvtsi2sd xmm0,eax
+    mov eax,480
+    cvtsi2sd xmm1,eax
+    call objc_msgSend
     return
 ; Internal ABI -> Objective-C dispatch; selectors registered on demand.
 proc m_send

@@ -22,6 +22,7 @@ p = subprocess.Popen([str(root/'build'/'copy-pasta-asm')],
                      env=dict(os.environ,COPY_PASTA_HISTORY=str(path)))
 app = A.NSApplication.sharedApplication()
 app.setActivationPolicy_(A.NSApplicationActivationPolicyRegular)
+app.finishLaunching()
 window = A.NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
     ((30,30),(620,400)), A.NSWindowStyleMaskTitled|A.NSWindowStyleMaskClosable,
     A.NSBackingStoreBuffered, False)
@@ -45,6 +46,14 @@ def wait(pred,reason,timeout=12):
     while time.monotonic()<deadline:
         pump()
         if pred(): return
+    print('frontmost pid:',A.NSWorkspace.sharedWorkspace().frontmostApplication().processIdentifier(),
+          'fixture pid:',os.getpid(),'assembly pid:',p.pid,flush=True)
+    system=AX.AXUIElementCreateSystemWide()
+    err,focused=AX.AXUIElementCopyAttributeValue(system,'AXFocusedUIElement',None)
+    print('focused AX result:',err,focused,flush=True)
+    if focused:
+        print('selected text:',AX.AXUIElementCopyAttributeValue(focused,'AXSelectedText',None),flush=True)
+    subprocess.run(['screencapture','-x',str(root/'build'/'integration-failure.png')],check=False)
     raise AssertionError(reason)
 
 def foreground():

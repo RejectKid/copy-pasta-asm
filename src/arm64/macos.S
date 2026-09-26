@@ -112,6 +112,8 @@ _main:
  load x0,gWindow
  msg sContent
  store x0,gContent
+ store x0,gRoot
+ bl make_split
  addr x0,tRemove
  mov x1,#10
  mov x2,#574
@@ -128,18 +130,24 @@ _main:
  mov x3,#770
  mov x4,#24
  bl label
+ load x0,gLeft
+ store x0,gContent
  addr x0,tHistory
- mov x1,#10
- mov x2,#538
+ mov x1,#0
+ mov x2,#502
  mov x3,#360
  mov x4,#24
  bl label
+ load x0,gRight
+ store x0,gContent
  addr x0,tPreview
- mov x1,#388
- mov x2,#538
- mov x3,#580
+ mov x1,#0
+ mov x2,#502
+ mov x3,#592
  mov x4,#24
  bl label
+ load x0,gRoot
+ store x0,gContent
  addr x0,tReady
  mov x1,#8
  mov x2,#4
@@ -147,28 +155,30 @@ _main:
  mov x4,#24
  bl label
  store x0,gStatus
+ load x0,gRight
+ store x0,gContent
  addr x0,tZero
- mov x1,#388
- mov x2,#32
- mov x3,#580
+ mov x1,#0
+ mov x2,#0
+ mov x3,#592
  mov x4,#24
  bl label
  store x0,gDetails
  klass cScroll
  msg sAlloc
- mov x1,#10
- mov x2,#32
+ mov x1,#0
+ mov x2,#0
  mov x3,#360
- mov x4,#502
+ mov x4,#496
  bl frame
  mov x19,x0
  mov x2,#1
  msg sVScroll
  mov x0,x19
- mov x2,#16
+ mov x2,#18
  msg sAutoresizing
  mov x2,x19
- load x0,gContent
+ load x0,gLeft
  msg sAddSubview
  klass cTable
  msg sAlloc
@@ -210,10 +220,10 @@ _main:
  msg sDocument
  klass cScroll
  msg sAlloc
- mov x1,#388
- mov x2,#66
- mov x3,#580
- mov x4,#468
+ mov x1,#0
+ mov x2,#34
+ mov x3,#592
+ mov x4,#462
  bl frame
  mov x19,x0
  mov x2,#1
@@ -225,7 +235,7 @@ _main:
  mov x2,#18
  msg sAutoresizing
  mov x2,x19
- load x0,gContent
+ load x0,gRight
  msg sAddSubview
  klass cTextView
  msg sAlloc
@@ -414,6 +424,67 @@ make_delegate:
  msg sAlloc
  msg sInit
  store x0,gDelegate
+ leave
+make_split:
+ enter
+ klass cSplit
+ msg sAlloc
+ mov x1,#10
+ mov x2,#32
+ mov x3,#960
+ mov x4,#526
+ bl frame
+ store x0,gSplit
+ mov x2,#1
+ msg sVertical
+ load x0,gSplit
+ mov x2,#1
+ msg sDividerStyle
+ load x0,gSplit
+ mov x2,#18
+ msg sAutoresizing
+ load x0,gRoot
+ load x2,gSplit
+ msg sAddSubview
+ klass cView
+ msg sAlloc
+ mov x1,#0
+ mov x2,#0
+ mov x3,#360
+ mov x4,#526
+ bl frame
+ store x0,gLeft
+ mov x2,x0
+ load x0,gSplit
+ msg sAddSubview
+ klass cView
+ msg sAlloc
+ mov x1,#368
+ mov x2,#0
+ mov x3,#592
+ mov x4,#526
+ bl frame
+ store x0,gRight
+ mov x2,x0
+ load x0,gSplit
+ msg sAddSubview
+ addr x0,sSplitPosition
+ bl _sel_registerName
+ mov x1,x0
+ load x0,gSplit
+ mov x2,#0
+ mov x9,#360
+ ucvtf d0,x9
+ bl _objc_msgSend
+ addr x0,sMinSize
+ bl _sel_registerName
+ mov x1,x0
+ load x0,gWindow
+ mov x9,#760
+ ucvtf d0,x9
+ mov x9,#480
+ ucvtf d1,x9
+ bl _objc_msgSend
  leave
 init_path:
  enter
@@ -1491,6 +1562,8 @@ cJSON: .asciz "NSJSONSerialization"
 cFileManager: .asciz "NSFileManager"
 cIndexSet: .asciz "NSIndexSet"
 cCharacterSet: .asciz "NSCharacterSet"
+cSplit: .asciz "NSSplitView"
+cView: .asciz "NSView"
 sAlloc: .asciz "alloc"
 sInit: .asciz "init"
 sRetain: .asciz "retain"
@@ -1584,6 +1657,10 @@ sTrim: .asciz "stringByTrimmingCharactersInSet:"
 sWhitespace: .asciz "whitespaceAndNewlineCharacterSet"
 sSubstring: .asciz "substringToIndex:"
 sAppend: .asciz "stringByAppendingString:"
+sVertical: .asciz "setVertical:"
+sDividerStyle: .asciz "setDividerStyle:"
+sSplitPosition: .asciz "setPosition:ofDividerAtIndex:"
+sMinSize: .asciz "setMinSize:"
 eVoid: .asciz "v@:@"
 eRows: .asciz "q@:@"
 eCell: .asciz "@@:@@q"
@@ -1650,6 +1727,10 @@ gPool: .quad 0
 gApp: .quad 0
 gWindow: .quad 0
 gContent: .quad 0
+gRoot: .quad 0
+gSplit: .quad 0
+gLeft: .quad 0
+gRight: .quad 0
 gDelegate: .quad 0
 gHistory: .quad 0
 gSelected: .quad -1
