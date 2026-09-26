@@ -27,6 +27,7 @@ fractional=[{'Text':str(i),'CapturedAt':f'2026-09-25T12:30:00.{i:07}-04:00','Sty
 result=roundtrip(json.dumps(fractional))
 assert [e['Text'] for e in result]==['9999999','1234567','1'],result
 assert [e['CapturedAt'] for e in result]==[fractional[i]['CapturedAt'] for i in (1,2,0)],result
+assert all(e['Style'] is None for e in result),result
 
 entries=[{'Text':f'item {i}','CapturedAt':f'2026-09-{i//24+1:02}T{i%24:02}:00:00Z','Style':None} for i in range(60)]
 result=roundtrip(json.dumps(entries))

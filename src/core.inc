@@ -48,7 +48,8 @@ core_json_open db '[',10,0
 core_json_close db 10,']',10,0
 core_json_entry db '  {"Text":',0
 core_json_date db ',"CapturedAt":',0
-core_json_style db ',"Style":{',0
+core_json_style db ',"Style":',0
+core_json_object_start db '{',0
 core_json_endstyle db '}',0
 core_json_end db '}',0
 core_json_comma db ',',10,0
@@ -608,6 +609,12 @@ proc core_save
 .saved_date:
     invoke json_write_string,rbx,rax
     ccall fputs,core_json_style,rbx
+    cmp qword [r13+E_FLAGS],0
+    jne .styled
+    ccall fputs,core_json_null,rbx
+    jmp .end_style
+.styled:
+    ccall fputs,core_json_object_start,rbx
     ccall fputs,core_json_font,rbx
     mov rax,[r13+E_FONT]
     test rax,rax
@@ -653,6 +660,7 @@ proc core_save
     ccall fputs,core_json_bg,rbx
     invoke json_write_number,rbx,r13,F_BG,E_BG
     ccall fputs,core_json_endstyle,rbx
+.end_style:
     ccall fputs,core_json_end,rbx
     inc r12
     jmp .loop
