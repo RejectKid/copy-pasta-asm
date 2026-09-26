@@ -8,20 +8,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/build-macos.sh --test
+      - run: python3 tests/macos-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: macos-arm64
-          path: build/copy-pasta-asm
+          path: |
+            build/copy-pasta-asm
+            build/ui.png
   macos-intel:
     runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - run: brew install nasm
       - run: bash scripts/build-macos.sh --test
+      - run: python3 tests/macos-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: macos-x64
-          path: build/copy-pasta-asm
+          path: |
+            build/copy-pasta-asm
+            build/ui.png
   windows:
     runs-on: windows-latest
     steps:
@@ -29,6 +35,8 @@ jobs:
       - name: Build and test Windows x64
         shell: pwsh
         run: ./scripts/build-windows.ps1 -Test
+      - name: Test capture and typing on the disposable runner desktop
+        run: python tests/windows-integration.py
       - uses: actions/upload-artifact@v4
         with:
           name: windows-x64
@@ -37,10 +45,12 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update && sudo apt-get install -y nasm libgtk-3-dev libx11-dev libxtst-dev xvfb xdotool
+      - run: sudo apt-get update && sudo apt-get install -y nasm libgtk-3-dev libx11-dev libxtst-dev xvfb xdotool xterm xclip
       - run: bash scripts/build-linux.sh --test
       - name: Start the native UI in an isolated X11 display
         run: xvfb-run -a timeout 5 build/copy-pasta-asm || test "$?" = 124
+      - name: Exercise capture and typing in an isolated X11 display
+        run: xvfb-run -a bash tests/linux-integration.sh
       - uses: actions/upload-artifact@v4
         with:
           name: linux-x64
