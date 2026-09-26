@@ -125,6 +125,7 @@ proc core_free
     jz .done
     ccall free,[rbx+E_TEXT]
     ccall free,[rbx+E_FONT]
+    ccall free,[rbx+E_DATE]
     ccall free,rbx
 .done:
     return
@@ -541,10 +542,15 @@ proc core_save
     ccall fputs,core_json_entry,rbx
     invoke json_write_string,rbx,[r13+E_TEXT]
     ccall fputs,core_json_date,rbx
+    mov rax,[r13+E_DATE]
+    test rax,rax
+    jnz .saved_date
     lea rax,[r13+E_TIME]
     ccall gmtime_fn,rax
     ccall strftime,date_buffer,128,core_iso_fmt,rax
-    invoke json_write_string,rbx,date_buffer
+    lea rax,[date_buffer]
+.saved_date:
+    invoke json_write_string,rbx,rax
     ccall fputs,core_json_style,rbx
     ccall fputs,core_json_font,rbx
     mov rax,[r13+E_FONT]
@@ -1055,6 +1061,13 @@ proc core_load
 .datevalue:
     cmp eax,256
     jne .invalid
+    ccall free,[rbx+E_DATE]
+    invoke core_strdup,json_token
+    mov [rbx+E_DATE],rax
+    test rax,rax
+    jz .invalid
+    invoke core_date_fraction,json_token
+    mov [rbx+E_FRACTION],rax
     invoke core_parse_date,json_token
     mov [rbx+E_TIME],rax
     jmp .field
@@ -1110,6 +1123,11 @@ proc core_load_insert
     mov rdx,[rax+E_TIME]
     cmp [rbx+E_TIME],rdx
     jg .insert
+    jl .older
+    mov rdx,[rax+E_FRACTION]
+    cmp [rbx+E_FRACTION],rdx
+    jg .insert
+.older:
     inc r13
     jmp .find
 .insert:
@@ -1133,6 +1151,37 @@ proc core_load_insert
     return
 .discard:
     invoke core_free,rbx
+    return
+
+; Seven decimal digits represent the reference DateTimeOffset tick precision.
+proc core_date_fraction
+    mov rbx,rcx
+    ccall strlen,rbx
+    cmp rax,20
+    jb .zero
+    cmp byte [rbx+19],'.'
+    jne .zero
+    lea rcx,[rbx+20]
+    xor eax,eax
+    mov r8d,7
+.digit:
+    movzx edx,byte [rcx]
+    sub edx,'0'
+    cmp edx,9
+    ja .pad
+    imul eax,10
+    add eax,edx
+    inc rcx
+    dec r8d
+    jnz .digit
+    return
+.pad:
+    imul eax,10
+    dec r8d
+    jnz .pad
+    return
+.zero:
+    xor eax,eax
     return
 
 proc core_parse_date

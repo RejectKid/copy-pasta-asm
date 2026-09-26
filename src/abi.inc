@@ -121,7 +121,9 @@ LAST_PROC_END:
 %define E_ITALIC 48
 %define E_FG 56
 %define E_BG 64
-%define E_BYTES 72
+%define E_DATE 72
+%define E_FRACTION 80
+%define E_BYTES 88
 %define MAX_ITEMS 50
 %define F_FONT 1
 %define F_SIZE 2

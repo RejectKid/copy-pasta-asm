@@ -23,6 +23,11 @@ assert len(result)==1 and result[0]['Text']==original[0]['Text'],result
 assert result[0]['Style']==style,result
 assert dt.datetime.fromisoformat(result[0]['CapturedAt'].replace('Z','+00:00')) == dt.datetime.fromisoformat(original[0]['CapturedAt'])
 
+fractional=[{'Text':str(i),'CapturedAt':f'2026-09-25T12:30:00.{i:07}-04:00','Style':None} for i in (1,9999999,1234567)]
+result=roundtrip(json.dumps(fractional))
+assert [e['Text'] for e in result]==['9999999','1234567','1'],result
+assert [e['CapturedAt'] for e in result]==[fractional[i]['CapturedAt'] for i in (1,2,0)],result
+
 entries=[{'Text':f'item {i}','CapturedAt':f'2026-09-{i//24+1:02}T{i%24:02}:00:00Z','Style':None} for i in range(60)]
 result=roundtrip(json.dumps(entries))
 assert [e['Text'] for e in result]==[f'item {i}' for i in range(59,9,-1)],result
