@@ -72,10 +72,10 @@ def key(code):
 
 try:
     pump(2)
-    text='Assembly café\nSecond line!'
+    text='Assembly café 🍝\nSecond line!'
     edit.setString_(text)
     foreground()
-    edit.setSelectedRange_((0,len(text)))
+    edit.setSelectedRange_((0,len(text.encode('utf-16-le'))//2))
     key(8)
     wait(lambda: len(json.loads(path.read_text()))==1,'AX selected-text capture failed')
     assert json.loads(path.read_text())[0]['Text']==text
