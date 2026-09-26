@@ -27,8 +27,8 @@ The first all-platform passing run after strict ARM64 JSON validation is
 The preview scrolling regression run is
 [36208023779](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36208023779).
 The current source passed all four platforms in
-[36252535319](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36252535319)
-at `8ede0dc`. This includes native capture and typing on both Mac architectures;
+[36252913220](https://github.com/RejectKid/copy-pasta-asm/actions/runs/36252913220)
+at `41b739c`. This includes native capture and typing on both Mac architectures;
 neither integration test was skipped. Later changes use the same workflow; check
 the run matching the commit.
 
@@ -37,7 +37,7 @@ the run matching the commit.
 * Real executable file tests: UTF-8 and UTF-16 escapes, all six style fields,
   timezone offsets, fractional timestamp preservation and ordering, newest-50
   selection, malformed JSON, invalid field types, impossible dates and offsets,
-  and unknown nested fields.
+  unknown nested fields, and `Style: null` for plain entries.
 * Windows native fixture: capture, Unicode typing, duplicates, cancellation,
   removing an entry while typing its owned snapshot, and persisted clearing.
 * Linux isolated X11 fixture: PRIMARY capture, duplicate promotion, global
