@@ -40,6 +40,7 @@ w_roundtrip dw __utf16__('--roundtrip'),0
 w_hotkey_error db 'One or more global hotkeys are already in use by another app.',0
 w_native_source db 'native edit control',0
 w_uia_source db 'UI Automation',0
+w_capture_source dq w_uia_source
 w_typing_buffer dq 0
 w_typing_index dq 0
 w_typing_length dq 0
@@ -151,17 +152,22 @@ proc start
     invoke w_refresh
     invoke ShowWindow,[w_window],5
     invoke UpdateWindow,[w_window]
-    xor ebx,ebx
+    xor r12d,r12d
     invoke RegisterHotKey,[w_window],100,0x4003,0x43
-    or ebx,eax
     test eax,eax
-    jz .hotkey_failed
+    sete r12b
     invoke RegisterHotKey,[w_window],101,0x4003,0x56
     test eax,eax
-    jz .hotkey_failed
+    sete al
+    movzx eax,al
+    or r12d,eax
     invoke RegisterHotKey,[w_window],102,0x4003,0x58
     test eax,eax
-    jnz .loop
+    sete al
+    movzx eax,al
+    or r12d,eax
+    test r12d,r12d
+    jz .loop
 .hotkey_failed:
     invoke w_status_set,w_hotkey_error
 .loop:
@@ -378,7 +384,7 @@ proc w_wndproc
     je .capture_status
     lea rdx,[core_rich]
 .capture_status:
-    ccall snprintf_fn,status_buffer,1024,core_capture_fmt,rax,rdx,w_uia_source
+    ccall snprintf_fn,status_buffer,1024,core_capture_fmt,rax,rdx,[w_capture_source]
     invoke w_status_set,status_buffer
     jmp .zero
 .save_failed:
@@ -638,5 +644,6 @@ proc w_type_tick
 
 %include "windows-capture.inc"
 %include "core.inc"
+LAST_PROC_END:
 section .data
 w_path_fmt db '%s',0

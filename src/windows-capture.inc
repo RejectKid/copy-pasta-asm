@@ -2,6 +2,8 @@
 ; Vtable indexes audited against Windows SDK UIAutomationClient.h.
 section .text
 proc w_capture
+    lea rax,[w_uia_source]
+    mov [w_capture_source],rax
     mov rbx,[w_uia]
     test rbx,rbx
     jz .native
@@ -24,6 +26,8 @@ proc w_capture
     test rax,rax
     jnz .done
 .native:
+    lea rax,[w_native_source]
+    mov [w_capture_source],rax
     invoke w_native_selection
 .done:
     return

@@ -9,7 +9,6 @@ extern AXIsProcessTrusted,AXUIElementCreateSystemWide,AXUIElementCopyAttributeVa
 extern CFStringCreateWithCString,CFStringGetLength,CFStringGetCString,CFStringGetCharacters
 extern CFRelease,CFMachPortCreateRunLoopSource,CFRunLoopGetCurrent,CFRunLoopAddSource
 extern kCFRunLoopCommonModes
-extern fflush
 extern CGEventTapCreate,CGEventTapEnable,CGEventGetFlags,CGEventGetIntegerValueField
 extern CGEventCreateKeyboardEvent,CGEventKeyboardSetUnicodeString,CGEventPost
 extern CGEventSetFlags
@@ -257,10 +256,6 @@ proc main
     invoke m_send,[m_preview],m_set_font,rax,0
     invoke core_load
     invoke m_refresh
-    invoke m_send,[m_preview],m_get_string,0,0
-    invoke m_send,rax,m_get_utf8,0,0
-    ccall puts,rax
-    ccall fflush,0
     invoke m_send,[m_window],m_center,0,0
     invoke m_send,[m_window],m_show,0,0
     invoke m_send,[m_app],m_activate,1,0

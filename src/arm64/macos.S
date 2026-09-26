@@ -52,6 +52,7 @@
  bl _class_addMethod
 .endm
 .text
+#include "json.inc"
 .globl _main
 .p2align 2
 _main:
@@ -668,6 +669,13 @@ load_history:
  msg sReadFile
  cbz x0,9f
  mov x19,x0
+ msg sLength
+ mov x20,x0
+ mov x0,x19
+ msg sBytes
+ mov x1,x20
+ bl json_validate
+ cbz w0,9f
  klass cJSON
  mov x2,x19
  mov x3,#0
@@ -1716,6 +1724,7 @@ sDefaultManager: .asciz "defaultManager"
 sCreateDir: .asciz "createDirectoryAtPath:withIntermediateDirectories:attributes:error:"
 sJSONData: .asciz "dataWithJSONObject:options:error:"
 sJSONObject: .asciz "JSONObjectWithData:options:error:"
+sBytes: .asciz "bytes"
 sWriteFile: .asciz "writeToFile:atomically:"
 sReadFile: .asciz "dataWithContentsOfFile:"
 sIsKind: .asciz "isKindOfClass:"

@@ -4,6 +4,11 @@
 bits 64
 default rel
 %macro proc 1
+%ifdef WINDOWS
+%ifdef LAST_PROC_END
+LAST_PROC_END:
+%endif
+%endif
 %1:
     push rbp
     mov rbp, rsp
@@ -15,6 +20,22 @@ default rel
     push r14
     push r15
     sub rsp, 328
+%ifdef WINDOWS
+    ; Win64 non-leaf routines require unwind metadata for native stack walkers.
+    ; Prologue: eight saved registers followed by a 328-byte allocation.
+    section .xdata rdata align=4
+    align 4
+%%unwind:
+    db 1,22,10,0
+    db 22,1
+    dw 41
+    db 15,0xf0,13,0xe0,11,0xd0,9,0xc0
+    db 7,0x70,6,0x60,5,0x30,1,0x50
+    section .pdata rdata align=4
+    dd %1 wrt ..imagebase, %%end wrt ..imagebase, %%unwind wrt ..imagebase
+    section .text
+    %xdefine LAST_PROC_END %%end
+%endif
 %endmacro
 %macro return 0
     add rsp, 328
